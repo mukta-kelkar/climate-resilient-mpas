@@ -1,0 +1,53 @@
+---
+title: "Exploratory Data Vis"
+author: "Mukta Kelkar"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(janitor)
+library(dplyr)
+library(tidyverse)
+
+```
+
+```{r read in data}
+data <- read.csv(here("data.csv")) %>% 
+  clean_names() %>% 
+  rename(mpa_effect = if_yes_in_what_way_mpa_effect)
+```
+
+```{r mpa effect table}
+effect_counts <- data %>% 
+  count(mpa_effect)
+ 
+temp <- effect_counts[-c(1), ]
+
+#pie(temp)
+
+ggplot(data = temp, aes(x = mpa_effect, y = n)) +
+  geom_col()
+```
+
+```{r geography}
+location_counts <- data %>% 
+  count(marine_ecoregion)
+
+temp2 <- location_counts[-c(1), ]
+
+ggplot(data = temp2, aes(x = marine_ecoregion, y = n)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+```
+
+```{r habitats}
+#make a word cloud
+```
+
+```{r mechanisms}
+#make a word cloud
+```
+
