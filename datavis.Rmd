@@ -7,13 +7,20 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+#tidyverse packages
 library(here)
 library(janitor)
 library(dplyr)
 library(tidyverse)
-#library(broom)
+
+#spatial data
 library(sf)
-#library(terra)
+
+#text analysis
+library(tidytext)
+library(textdata)
+library(ggwordcloud)
+
 ```
 
 ## Read in data
@@ -107,20 +114,56 @@ count_n$n[is.na(count_n$n)] <- 0
 #make a plot
 ggplot() +
   geom_sf(data = realms, aes(fill = marine_ecoregion)) +
-  scale_fill_manual(values = c("antiquewhite", "chocolate4", "darkgreen", "antiquewhite4", "olivedrab3", "lightsteelblue3", "lightpink", "maroon", "lightsalmon3", "cyan4", "coral3", "orchid3")) +
+  scale_fill_grey(start = 1, end = 0) +
+  #scale_fill_manual(values = c("antiquewhite", "chocolate4", "darkgreen", "antiquewhite4", "olivedrab3", "lightsteelblue3", "lightpink", "maroon", "lightsalmon3", "cyan4", "coral3", "orchid3")) +
+    theme_classic() +
   geom_sf(data = count_n, 
           pch = 21, 
-          aes(size = n)) +
-  ggtitle("Marine Ecoregions") +
-  theme_classic()
+          aes(size = n,
+              color = "red"),
+          fill = "red") +
+  ggtitle("Marine Ecoregions")
 
 ```
 
 ```{r habitats}
 #make a word cloud
+
+
 ```
 
 ```{r mechanisms}
 #make a word cloud
+
+#make a dataframe with just mechanisms, excluding the rest of the data
+mechanisms <- data %>% 
+  select(mechanim)
+
+#make a dataframe with unnested tokens (one word per row)
+mech_tokens <- mechanisms %>% 
+  unnest_tokens(word, mechanim) %>% #### note to self: correct spelling after uploading new datasheet ####
+  anti_join(stop_words) #remove stopwords
+
+#count number of every word
+mech_counts <- mech_tokens %>% 
+  count(word) %>% 
+  arrange(-n) #order words from most used to least used
+
+#make a dataframe of the top 300 words
+top_121 <- mech_counts %>% 
+  arrange(-n) %>%  #arrange in descending order by count
+  slice(1:121)  # keep only the top 121 words (omits all words that only occur once)
+  
+# make a word cloud
+ggplot(data = top_121, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n)) +
+  scale_size_area(max_size = 9) + #increases text size
+  scale_color_gradientn(colors = c("mediumpurple4", "turquoise", "palevioletred")) +
+  labs(
+    title = "Top 121 words describing MPA mechanisms",
+    caption = "Omits all words that only occurred once"
+  ) +
+  theme_minimal()
+
 ```
 
