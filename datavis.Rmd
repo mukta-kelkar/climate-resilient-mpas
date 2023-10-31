@@ -1,5 +1,5 @@
 ---
-title: "Exploratory Data Vis"
+title: "Explore Data for Climate Resilient MPAs Lit Review"
 author: "Mukta Kelkar"
 date: "`r Sys.Date()`"
 output: html_document
@@ -11,14 +11,24 @@ library(here)
 library(janitor)
 library(dplyr)
 library(tidyverse)
-
+#library(broom)
+library(sf)
+#library(terra)
 ```
+
+## Read in data
 
 ```{r read in data}
+#read in lit review data
 data <- read.csv(here("data.csv")) %>% 
-  clean_names() %>% 
-  rename(mpa_effect = if_yes_in_what_way_mpa_effect)
+  clean_names()
+
+#read in MEOW TNC Shapefile
+meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
+  clean_names()
 ```
+
+## MPA Effects
 
 ```{r mpa effect table}
 effect_counts <- data %>% 
@@ -26,11 +36,27 @@ effect_counts <- data %>%
  
 temp <- effect_counts[-c(1), ]
 
-#pie(temp)
+#create a bar graph to visualize types of mpa effect
+ggplot(data = temp, aes(x = mpa_effect, y = n)) +  #create plot with MPA effect on the x axis and counts on the y-axis
+  geom_col(width = 0.75, fill = "steelblue3") +      #use a bar graph format with slightly narrower bars and fill color steelblue3
+  geom_text(aes(label = n), vjust = -.5) +
+  labs(               #rename y-axis, delete x-axis label, and provide a caption
+    y = "Counts",
+    x = "",
+    caption = "Figure 1: Most MPAs either show Effect B (support a more resilient ecosystem) or have no effect."
+  ) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 12, angle = 20, hjust = 1, color = "gray6" ),    #change size, angle, positioning, and color of x-axis tick labels
+        plot.caption = element_text(size = 10),        #set font size for caption text
+        axis.text.y = element_blank(),      #delete y axis text
+        axis.ticks.y = element_blank()) +     #delete y axis ticks
+  scale_x_discrete(labels = c("Effect A", "Effect B", "Effect C", "Multiple Effects", "Negative Effects", "No Effect"))
 
-ggplot(data = temp, aes(x = mpa_effect, y = n)) +
-  geom_col()
 ```
+
+## Geographic distribution of existing studies
+
+some code from: https://www.imachordata.com/2015/03/28/meow-its-marine-ecoregions-in-r-2/ 
 
 ```{r geography}
 location_counts <- data %>% 
@@ -38,9 +64,56 @@ location_counts <- data %>%
 
 temp2 <- location_counts[-c(1), ]
 
+#bar plot of country locations
 ggplot(data = temp2, aes(x = marine_ecoregion, y = n)) +
   geom_col() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=.4))
+
+#proportional map of country locations
+#preliminary explorations of data
+#plot(meow)
+#plot(realms)
+#plot(realms, lwd=2)
+
+#make spatial polygon for realms
+realms <- meow %>%
+  group_by(realm) %>%
+  summarize(geometry = st_combine(geometry)) %>% 
+  mutate(realm = recode(realm,
+                        "Arctic" = "arctic",
+                        "Central Indo-Pacific" = "central_indo_pacific",
+                        "Eastern Indo-Pacific" = "eastern_indo_pacific",
+                        "Southern Ocean" = "southern_ocean",
+                        "Temperate Australasia" = "temperate_autralasia",
+                        "Temperate Northern Atlantic" = "temperate_northern_atlantic",
+                        "Temperate Northern Pacific" = "temperate_northern_pacific",
+                        "Temperate South America" = "temperate_south_america",
+                        "Temperate Southern Africa" = "temperate_southern_africa",
+                        "Tropical Atlantic" = "tropical_atlantic",
+                        "Tropical Eastern Pacific" = "tropical_eastern_pacific",
+                        "Western Indo-Pacific" = "western_indo_pacific")) %>% 
+  rename(marine_ecoregion = realm)
+
+#find centroids of each ecoregion
+symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE)
+
+#join centroids of each ecoregion to counts data, so that the counts data can be placed at the centroid on the map
+count_n <- left_join(symbol_pos, temp2, by = "marine_ecoregion")
+
+#change NAs to 0s
+count_n$n[is.na(count_n$n)] <- 0
+
+
+#make a plot
+ggplot() +
+  geom_sf(data = realms, aes(fill = marine_ecoregion)) +
+  scale_fill_manual(values = c("antiquewhite", "chocolate4", "darkgreen", "antiquewhite4", "olivedrab3", "lightsteelblue3", "lightpink", "maroon", "lightsalmon3", "cyan4", "coral3", "orchid3")) +
+  geom_sf(data = count_n, 
+          pch = 21, 
+          aes(size = n)) +
+  ggtitle("Marine Ecoregions") +
+  theme_classic()
+
 ```
 
 ```{r habitats}
