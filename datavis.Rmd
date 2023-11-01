@@ -2,10 +2,12 @@
 title: "Explore Data for Climate Resilient MPAs Lit Review"
 author: "Mukta Kelkar"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 
-```{r setup, include=FALSE}
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 #tidyverse packages
 library(here)
@@ -25,10 +27,11 @@ library(ggwordcloud)
 
 ## Read in data
 
-```{r read in data}
+```{r read in data, message = FALSE, warning = FALSE}
 #read in lit review data
 data <- read.csv(here("data.csv")) %>% 
-  clean_names()
+  clean_names() %>% 
+  select(-mpa_effect_size) #not currently considering this variable
 
 #read in MEOW TNC Shapefile
 meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
@@ -37,27 +40,38 @@ meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>%
 
 ## MPA Effects
 
-```{r mpa effect table}
+```{r mpa effect table, message = FALSE, warning = FALSE}
 effect_counts <- data %>% 
   count(mpa_effect)
  
 temp <- effect_counts[-c(1), ]
 
 #create a bar graph to visualize types of mpa effect
-ggplot(data = temp, aes(x = mpa_effect, y = n)) +  #create plot with MPA effect on the x axis and counts on the y-axis
+mpaeffect_bargraph <- ggplot(data = temp, aes(x = mpa_effect, y = n)) +  #create plot with MPA effect on the x axis and counts on the y-axis
   geom_col(width = 0.75, fill = "steelblue3") +      #use a bar graph format with slightly narrower bars and fill color steelblue3
-  geom_text(aes(label = n), vjust = -.5) +
+  geom_text(aes(label = n), vjust = -.5, size = 5) +    #add labels to columns
   labs(               #rename y-axis, delete x-axis label, and provide a caption
-    y = "Counts",
+    y = "",
     x = "",
-    caption = "Figure 1: Most MPAs either show Effect B (support a more resilient ecosystem) or have no effect."
+    #caption = "Figure 1: Most MPAs either show Effect B (support a more resilient ecosystem) or have no effect."
   ) +
   theme_classic() +
-  theme(axis.text = element_text(size = 12, angle = 20, hjust = 1, color = "gray6" ),    #change size, angle, positioning, and color of x-axis tick labels
-        plot.caption = element_text(size = 10),        #set font size for caption text
+  theme(axis.text = element_text(size = 14, angle = 20, hjust = 1, color = "gray6" ),    #change size, angle, positioning, and color of x-axis tick labels
+        plot.caption = element_text(size = 12),        #set font size for caption text
         axis.text.y = element_blank(),      #delete y axis text
-        axis.ticks.y = element_blank()) +     #delete y axis ticks
-  scale_x_discrete(labels = c("Effect A", "Effect B", "Effect C", "Multiple Effects", "Negative Effects", "No Effect"))
+        axis.ticks.y = element_blank(),    #delete y axis ticks
+        panel.grid.major = element_blank(),    #delete major grid lines
+        panel.grid.minor = element_blank(),     #delete minor grid lines
+        panel.background = element_rect(fill = "white"),   #make background color white
+        axis.line.x = element_blank(),    #delete axis line
+        axis.line.y = element_blank()) +   #delete axis line
+  expand_limits(y = 28) + #expand limits of y axis so labels on top of the columns don't get cut off
+  scale_x_discrete(labels = c("Effect A", "Effect B", "Effect C", "Multiple Effects", "Negative Effects", "No Effect"))  #rename x-axis labels
+
+mpaeffect_bargraph #prints graph into knitted document
+
+# Save the ggplot as a .png file
+ggsave("mpa_effects_bargraph.png", plot = mpaeffect_bargraph, width = 8, height = 4, dpi = 300)
 
 ```
 
@@ -65,7 +79,7 @@ ggplot(data = temp, aes(x = mpa_effect, y = n)) +  #create plot with MPA effect 
 
 some code from: https://www.imachordata.com/2015/03/28/meow-its-marine-ecoregions-in-r-2/ 
 
-```{r geography}
+```{r geography, message = FALSE, warning = FALSE}
 location_counts <- data %>% 
   count(marine_ecoregion)
 
@@ -110,7 +124,6 @@ count_n <- left_join(symbol_pos, temp2, by = "marine_ecoregion")
 #change NAs to 0s
 count_n$n[is.na(count_n$n)] <- 0
 
-
 #make a plot
 ggplot() +
   geom_sf(data = realms, aes(fill = marine_ecoregion)) +
@@ -126,22 +139,43 @@ ggplot() +
 
 ```
 
-```{r habitats}
+## Type of habitats studied
+
+```{r habitats, message = FALSE, warning = FALSE}
 #make a word cloud
+ 
+#make a dataframe with just habitat_types
+habitats <- data %>% 
+  select(habitat_type) 
+
+#make a dataframe with unnested tokens (one word per row)
+habitat_tokens <- habitats %>% 
+  unnest_tokens(word, habitat_type) %>% 
+  anti_join(stop_words) %>% #remove stopwords
+  filter(!(word %in% c("na", "reef", "forest"))) #delete na values and the word reef and forest
+         
+#count number of every word
+habitat_counts <- habitat_tokens %>% 
+  count(word) %>% 
+  arrange(-n) #order words from most used to least used
 
 
 ```
 
-```{r mechanisms}
-#make a word cloud
+## Ecosystem characteristics 
+
+## Mechanisms for MPA effectiveness
+
+```{r mechanisms, message = FALSE, warning = FALSE}
+### make a word cloud ###
 
 #make a dataframe with just mechanisms, excluding the rest of the data
 mechanisms <- data %>% 
-  select(mechanim)
+  select(mechanism)
 
 #make a dataframe with unnested tokens (one word per row)
 mech_tokens <- mechanisms %>% 
-  unnest_tokens(word, mechanim) %>% #### note to self: correct spelling after uploading new datasheet ####
+  unnest_tokens(word, mechanism) %>% #### note to self: correct spelling after uploading new datasheet ####
   anti_join(stop_words) #remove stopwords
 
 #count number of every word
@@ -158,7 +192,7 @@ top_121 <- mech_counts %>%
 ggplot(data = top_121, aes(label = word)) +
   geom_text_wordcloud(aes(color = n, size = n)) +
   scale_size_area(max_size = 9) + #increases text size
-  scale_color_gradientn(colors = c("mediumpurple4", "turquoise", "palevioletred")) +
+  scale_color_gradientn(colors = c("deepskyblue", "darkorchid3", "turquoise", "palevioletred")) +
   labs(
     title = "Top 121 words describing MPA mechanisms",
     caption = "Omits all words that only occurred once"
