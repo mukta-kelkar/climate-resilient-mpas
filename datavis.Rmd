@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 #tidyverse packages
 library(here)
 library(janitor)
@@ -23,6 +23,10 @@ library(tidytext)
 library(textdata)
 library(ggwordcloud)
 
+#print pretty tables
+library(gt)
+library(kableExtra)
+
 ```
 
 ## Read in data
@@ -36,9 +40,33 @@ data <- read.csv(here("data.csv")) %>%
 #read in MEOW TNC Shapefile
 meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
   clean_names()
+
+#make MPA effects definitions dataframe
+definitions <- data.frame(mpa_effect = c("effect_a", "effect_b", "effect_c"),
+                          definition = c("MPA stops climate effect directly", "MPA supports more resilient ecosystem", "offsets mortality by restricting industry"))
 ```
 
 ## MPA Effects
+
+Print a table of MPA effects definitions
+
+```{r}
+#make table
+mpatable <- definitions %>% 
+  kbl() %>% 
+  kable_styling("hover", full_width = F)
+  
+
+#print table
+mpatable
+
+#save table as .png
+save_kable(x = mpatable, file = "MPA Table.png")
+
+```
+
+
+Use `ggplot2` to make a bar graph showing the number of occurences of each mpa effect.
 
 ```{r mpa effect table, message = FALSE, warning = FALSE}
 effect_counts <- data %>% 
@@ -74,6 +102,74 @@ mpaeffect_bargraph #prints graph into knitted document
 ggsave("mpa_effects_bargraph.png", plot = mpaeffect_bargraph, width = 8, height = 4, dpi = 300)
 
 ```
+
+Next, I dug into which habitat and geography scenarios were associated with each MPA effect.
+
+```{r}
+# negative effect
+negative_effect <- data %>% 
+  filter(mpa_effect == "negative_effect")
+
+# no effect
+no_effect <- data %>% 
+  filter(mpa_effect == "no_effect")
+
+# effect_a, mpa stops climate effect directly
+effect_a <- data %>% 
+  filter(mpa_effect == "effect_a")
+
+# effect b, mpa supports more resilient ecosystem
+effect_b <- data %>% 
+  filter(mpa_effect == "effect_b")
+
+# effect c, offsets mortality by restricting industry
+effect_c <- data %>% 
+  filter(mpa_effect == "effect_c")
+
+
+```
+
+After that, I parsed out which climate effects and geographies most applied to each mpa effect
+
+```{r}
+#save list of mpa effects
+effect_list <- unique(data$mpa_effect)
+
+# create empty dataframe
+mpa_habitats <- data.frame(matrix(ncol = 3, nrow = length(effect_list)))
+
+#provide column names
+colnames(mpa_habitats) <- c("mpa_effect", "habitat", "realm")
+
+for(i in 1:length(effect_list)) {  #for every element starting with the first element
+  
+  #filter by mpa effect and save to holding vector `effect`
+  effect <- data %>% filter(mpa_effect == effect_list[i]) 
+  
+  #make list of all habitats and save to holding vector `habs`
+  habs <- toString(as.list(unique(effect$habitat_type)))    #save unique values as a list, and then put the entire list in one cell of the holding vector
+  
+  #make a list of all marine realms holding vector `re`
+  re <- toString(as.list(unique(effect$marine_ecoregion))) #save unique values as a list, and then put the entire list in one cell of the holding vector
+  
+  #create a holding vector to append as a row to the dataframe
+  vec <- c((effect_list[i]),(habs), (re)) # create vector of mpa effect, habitat, and marine ecoregion
+  
+  #append rows to dataframe
+  mpa_habitats[i,] <- vec
+}
+
+
+#make table
+effects_table <- mpa_habitats %>% 
+  kbl() %>% 
+  kable_styling("hover", full_width = F)
+  
+
+#print table
+effects_table
+```
+
 
 ## Geographic distribution of existing studies
 
@@ -125,7 +221,7 @@ count_n <- left_join(symbol_pos, temp2, by = "marine_ecoregion")
 count_n$n[is.na(count_n$n)] <- 0
 
 #make a plot
-ggplot() +
+marine_realms <- ggplot() +
   geom_sf(data = realms, aes(fill = marine_ecoregion)) +
   scale_fill_grey(start = 1, end = 0) +
   #scale_fill_manual(values = c("antiquewhite", "chocolate4", "darkgreen", "antiquewhite4", "olivedrab3", "lightsteelblue3", "lightpink", "maroon", "lightsalmon3", "cyan4", "coral3", "orchid3")) +
@@ -136,6 +232,8 @@ ggplot() +
               color = "red"),
           fill = "red") +
   ggtitle("Marine Ecoregions")
+
+ggsave("marine_realms_map.png", plot = marine_realms, width = 8, height = 8, dpi = 300)
 
 ```
 
@@ -198,6 +296,7 @@ ggplot(data = top_121, aes(label = word)) +
     caption = "Omits all words that only occurred once"
   ) +
   theme_minimal()
+
 
 ```
 
