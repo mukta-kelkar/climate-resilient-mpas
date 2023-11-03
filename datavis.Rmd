@@ -27,6 +27,9 @@ library(ggwordcloud)
 library(gt)
 library(kableExtra)
 
+#misc
+library(viridis)
+
 ```
 
 ## Read in data
@@ -64,7 +67,6 @@ mpatable
 save_kable(x = mpatable, file = "MPA Table.png")
 
 ```
-
 
 Use `ggplot2` to make a bar graph showing the number of occurences of each mpa effect.
 
@@ -186,13 +188,7 @@ ggplot(data = temp2, aes(x = marine_ecoregion, y = n)) +
   geom_col() +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=.4))
 
-#proportional map of country locations
-#preliminary explorations of data
-#plot(meow)
-#plot(realms)
-#plot(realms, lwd=2)
-
-#make spatial polygon for realms
+#make spatial polygon for marine realms
 realms <- meow %>%
   group_by(realm) %>%
   summarize(geometry = st_combine(geometry)) %>% 
@@ -212,7 +208,14 @@ realms <- meow %>%
   rename(marine_ecoregion = realm)
 
 #find centroids of each ecoregion
-symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE)
+symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE) 
+
+#edit centroid locations
+#new_coordinates <- st_point(c(36, -121))
+
+#df <- symbol_pos %>% 
+ # filter(marine_ecoregion == "temperate_northern_pacific") %>% 
+  #mutate(geometry = new_coordinates)
 
 #join centroids of each ecoregion to counts data, so that the counts data can be placed at the centroid on the map
 count_n <- left_join(symbol_pos, temp2, by = "marine_ecoregion")
@@ -221,17 +224,27 @@ count_n <- left_join(symbol_pos, temp2, by = "marine_ecoregion")
 count_n$n[is.na(count_n$n)] <- 0
 
 #make a plot
+#refining steps: need to add labels to the bubbles, need to figure out ideal color for bubbles
 marine_realms <- ggplot() +
-  geom_sf(data = realms, aes(fill = marine_ecoregion)) +
-  scale_fill_grey(start = 1, end = 0) +
-  #scale_fill_manual(values = c("antiquewhite", "chocolate4", "darkgreen", "antiquewhite4", "olivedrab3", "lightsteelblue3", "lightpink", "maroon", "lightsalmon3", "cyan4", "coral3", "orchid3")) +
-    theme_classic() +
+  geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
+  scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
+  #scale_color_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) +
+  labs(
+    fill = ""
+  ) +
   geom_sf(data = count_n, 
           pch = 21, 
           aes(size = n,
               color = "red"),
-          fill = "red") +
-  ggtitle("Marine Ecoregions")
+          fill = "red",
+          show.legend = FALSE) +
+  theme_classic() +
+  guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
+         color = FALSE) + #don't show color legend
+  ggtitle("Marine Realms") +
+  theme(plot.title = element_text(hjust = 0.5))   #move title to center
+
+marine_realms
 
 ggsave("marine_realms_map.png", plot = marine_realms, width = 8, height = 8, dpi = 300)
 
