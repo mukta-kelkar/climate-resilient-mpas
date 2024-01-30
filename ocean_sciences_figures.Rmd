@@ -1,0 +1,88 @@
+---
+title: "Ocean Sciences Figures"
+author: "Mukta Kelkar"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#tidyverse packages
+library(here)
+library(janitor)
+library(dplyr)
+library(tidyverse)
+```
+
+```{r read in & clean data}
+#read in lit review data
+data <- read.csv(here("data5.csv")) %>% 
+  clean_names() %>% 
+  select(-mpa_effect_size) #not currently considering this variable
+```
+
+
+# Set of pie charts for Figure 1
+Make a pie chart for each of the following parameters:
+- habitat_type
+- climate_effect
+- mpa_effect
+- marine_ecoregion
+
+```{r figure 1}
+#figure 1a
+habitat_counts <- data %>% 
+  count(habitat_type) #make dataset with counts data
+
+fig1a <- ggplot(data = habitat_counts, aes (x = "", y = n, fill = habitat_type)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +   #set up bar chart
+  coord_polar("y") +                                          #put bar chart in polar coordinates to shape it into a pie chart
+  theme_void() +                                              #get rid of background
+  theme(legend.position = "right") + 
+  labs(
+    fill = "Habitat Type"
+  )
+
+#figure 1b
+mpa_effect_counts <- data %>% 
+  count(mpa_effect) #make dataset with counts data
+
+fig1b <- ggplot(data = mpa_effect_counts, aes (x = "", y = n, fill = mpa_effect)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +   #set up bar chart
+  coord_polar("y") +                                          #put bar chart in polar coordinates to shape it into a pie chart
+  theme_void() +                                              #get rid of background
+  theme(legend.position = "right") + 
+  labs(
+    fill = "MPA Effect Type"
+  )
+
+#figure 1c
+ecoregion_counts <- data %>% 
+  count(marine_ecoregion) #make dataset with counts data
+
+fig1c <- ggplot(data = ecoregion_counts, aes (x = "", y = n, fill = marine_ecoregion)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +   #set up bar chart
+  coord_polar("y") +                                          #put bar chart in polar coordinates to shape it into a pie chart
+  theme_void() +                                              #get rid of background
+  theme(legend.position = "right") + 
+  labs(
+    fill = "Marine Ecoregion"
+  )
+
+#figure 1d
+
+
+#print figures
+fig1a
+fig1b
+fig1c
+
+```
+
+
+# Maps for Figure 2
+## MPA Effects by Region
+## Habitat Types by Region
+
+# 
