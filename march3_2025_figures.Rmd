@@ -1,0 +1,351 @@
+---
+title: "Chapter 1 Paper Figures - v1"
+author: "Mukta Kelkar"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+#tidyverse packages
+library(here)
+library(janitor)
+library(dplyr)
+library(tidyverse)
+
+#spatial data
+library(sf)
+
+#datavis
+library(RColorBrewer)
+library(showtext)
+library(pals)
+library(rcartocolor)
+library(gridExtra)
+library(patchwork)
+```
+
+
+```{r read in data and set up fonts, message=FALSE}
+#read in lit review data
+data <- read.csv(here("data.csv"), na.strings = c("", "NA")) %>% #read in data with empty cells as NA
+  clean_names() %>%
+  select(-magnitude) %>% 
+  select(-mechanism) #%>% 
+  #na.omit() #omit NAs
+
+data_unique <- data %>% 
+  select(citation, topic, habitat_type, habitat_subtype, geographic_region) %>% #select variable that are constant within each case study
+  distinct(citation, habitat_type, geographic_region, .keep_all = TRUE)
+
+#read in MEOW TNC Shapefile
+meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
+  clean_names()
+
+#add google fonts to working memory for figures
+font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
+                family = "worksans")
+
+#standard font size for all graphs
+global_size = 14
+```
+
+## Background 
+### Habitat Information
+Number of case studies in each habitat type and habitat subtype. Filtered so that each case study is only represented once.
+```{r habitat and subhabitat type, message = FALSE}
+#figure 1a
+habitat_counts <- data_unique %>% 
+  count(habitat_type) #make dataset with counts data
+
+#figure 1a_bar
+fig1a_bar <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, -n), y = n)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "Habitat Type",
+    y = "Number of Occurences"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+#figure 1a_sub
+subhabitat_counts <- data_unique %>% 
+  count(habitat_subtype) #make dataset with counts data
+
+#figure 1a_bar
+fig1a_sub_bar <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, -n), y = n)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "Habitat Subtype",
+    y = "Number of Occurences"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+fig1 <- wrap_plots(fig1a_bar, fig1a_sub_bar)
+
+#print figure
+fig1
+```
+
+### Assemblage Information
+How much each assemblage type was studied proportionally. I don't know if it would make sense to manually group some of the assemblage types for data analysis/more refined visuals (I did this for the metrics later on).
+```{r assemblages and species, fig.width=20}
+assemblage_all <- data %>% 
+  count(assemblage_type) %>% 
+  mutate(proportion = n /sum(n))
+
+#figure - first option
+fig_assemblage_proportion <- ggplot(data = assemblage_all, aes (x = reorder(assemblage_type, -proportion), y = proportion)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "Assemblage Type",
+    y = "Comparitive Number of Occurences"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+fig_assemblage_proportion
+
+#figure simplified
+
+
+```
+
+### Geography
+Bar plot and map of which marine realms (defined by Marin Ecoregions of the World) the case studies were in. Filtered so that each case study is only represented once.
+```{r figure 2: map of study sites, message = FALSE}
+ecoregion_counts <- data_unique %>% 
+  count(geographic_region) #make dataset with counts data
+
+ggplot(data = ecoregion_counts, aes(x = reorder(geographic_region, -n), y = n)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
+
+fig1c_bar <- ggplot(data = ecoregion_counts, aes (x = reorder(geographic_region, -n), y = n)) +
+  geom_bar(stat = "identity", width = .75, color = "white") +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "Ecoregion",
+    y = "Number of Occurences"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+#make spatial polygon for marine realms
+realms <- meow %>%
+  group_by(realm) %>%
+  summarize(geometry = st_combine(geometry)) %>% 
+  mutate(realm = recode(realm,
+                        "Arctic" = "arctic",
+                        "Central Indo-Pacific" = "central_indo_pacific",
+                        "Eastern Indo-Pacific" = "eastern_indo_pacific",
+                        "Southern Ocean" = "southern_ocean",
+                        "Temperate Australasia" = "temperate_autralasia",
+                        "Temperate Northern Atlantic" = "temperate_northern_atlantic",
+                        "Temperate Northern Pacific" = "temperate_northern_pacific",
+                        "Temperate South America" = "temperate_south_america",
+                        "Temperate Southern Africa" = "temperate_southern_africa",
+                        "Tropical Atlantic" = "tropical_atlantic",
+                        "Tropical Eastern Pacific" = "tropical_eastern_pacific",
+                        "Western Indo-Pacific" = "western_indo_pacific")) %>% 
+  rename(marine_ecoregion = realm)
+
+#create manual coordinates for temperate_northern_pacific centroid
+new_coordinates <- st_point(c(-125, 38))
+
+#find centroids of each ecoregion
+symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE) %>% 
+  assign_in(list(2,7), new_coordinates) %>% #manually replace temperate_northern_pacific centroid
+  rename(geographic_region = marine_ecoregion)
+
+#df <- symbol_pos %>% 
+ # filter(marine_ecoregion == "temperate_northern_pacific") %>% 
+  #mutate(geometry = new_coordinates)
+
+#join centroids of each ecoregion to counts data, so that the counts data can be placed at the centroid on the map
+count_n <- left_join(symbol_pos, ecoregion_counts, by = "geographic_region")
+
+#change NAs to 0s
+count_n$n[is.na(count_n$n)] <- 0
+
+#make a plot
+#refining steps: need to add labels to the bubbles, need to figure out ideal color for bubbles
+marine_realms <- ggplot() +
+  geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
+  scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
+  #scale_color_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) +
+  labs(
+    fill = "",
+    caption = "This map does not include 4 global studies and 5 studies in the northern hemisphere."
+  ) +
+  geom_sf(data = count_n, 
+          pch = 21, 
+          aes(size = n,
+              color = "red"),
+          fill = "red",
+          show.legend = FALSE) +
+  scale_size(range = c(0, 9)) +      #adjust size of bubbles on map
+  geom_text(data = count_n, #add a geom for labels of the bubble sizes
+            aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[, 2],   #add x and y values to geom_text
+              nudge_x = 0.5, nudge_y = 0.5, label = n)) +    #add data labels to each bubble
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme_classic() +
+  guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
+         color = FALSE) + #don't show color legend
+  ggtitle("Number of case studies conducted in each marine realm") +
+  theme(plot.title = element_text(hjust = 0.5))   #move title to center
+
+marine_realms
+```
+
+## Frameworks
+### MPA  & Climate Effects
+Proportion of occurrences of each MPA effect.
+```{r mpa effects, message = FALSE}
+#figure 1b
+mpa_effect_counts <- data %>% 
+  count(mpa_effect) %>% #make dataset with counts data
+  mutate(proportion = n /sum(n))
+
+#figure 1b
+fig1b_bar <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, -proportion), y = proportion)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "MPA Effect Type",
+    y = "Proportion of Occurences"
+  ) +
+  #scale_x_discrete(labels = c("None", "Ecosystem (+)", "Population", "Ecosystem (-)")) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+fig1b_bar
+```
+
+Proportion of occurrences of each climate effect.
+```{r climate effects, message = FALSE}
+#figure 1d
+climate_counts_prelim <- data %>% 
+  count(climate_effect) %>% #preliminary counts of climate effect (without separating rows with multiple categories)
+  mutate(proportion = n /sum(n))
+
+#figure 1d
+fig1d_bar <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, -proportion), y = proportion)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  theme_classic(base_size = global_size) +
+  labs(
+    x = "Ecological Effect of Climate Change",
+    y = "Proportion of Occurences"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+fig1d_bar
+
+```
+
+### Heatmap 
+```{r figure 5: heatmap, message=FALSE}
+eco_effects <- data %>% 
+  select(mpa_effect, climate_effect) %>% 
+  group_by(mpa_effect, climate_effect) %>% 
+  count(mpa_effect, climate_effect, name = "count")
+
+heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect, fill = count)) +
+  geom_tile() +
+  labs(
+    x = "Climate Effect",
+    y = "MPA Effect"
+  ) +
+  #scale_y_discrete(labels = c("Ecosystem (+)", "Population", "Ecosystem (-)", "None")) +
+  scale_fill_gradient2(low = "grey",
+                      high = "black") +
+  theme_classic(base_size = global_size) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+heatmap_v2
+
+ggsave("heatmap_v2.png", plot = heatmap_v2, width = 10, height = 5, bg = "transparent")
+```
+
+### Metrics 
+Metrics used to measure each MPA effect type, not normalized (I'm planning to, I just ran out of time today.)
+```{r figure 6: metrics to measure, message=FALSE, fig.width=9, fig.height=10}
+metrics_measured <- data %>% 
+  select(climate_effect, ecological_fitness_metric) %>% 
+  group_by(climate_effect, ecological_fitness_metric) %>% 
+  count(climate_effect, ecological_fitness_metric, name = "count")
+
+#unique_metrics <- data %>% 
+  #distinct(ecological_fitness_metric)
+
+#write_csv(unique_metrics, "unique_metrics.csv")
+
+lookup_table <- read.csv(here("unique_metrics.csv"))
+
+metrics_combined <- metrics_measured %>% 
+  left_join(lookup_table, by = "ecological_fitness_metric") %>% 
+  group_by(climate_effect, grouped_metric) %>% 
+  summarise(total_count = sum(count), .groups = "drop")
+  
+fig3 <- ggplot(data = metrics_combined, aes(x = grouped_metric, y = total_count)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~climate_effect, scales = "free_x") +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  labs(
+    x = "Ecological Fitness Metric",
+    y = "Number of Occurences"
+  )
+
+fig3
+
+ggsave("fig3.png", plot = fig3, width = 9, height = 10, bg = "transparent")
+
+```
+
+
+## Print and Save Figures
+```{r print figures, eval = FALSE}
+#print figures
+fig1a_bar
+fig1a_sub_bar
+fig1b_bar
+fig1c_bar
+fig1d_bar
+#fig1e_bar
+```
+
+
+```{r save figures, eval=FALSE}
+#save figures
+ggsave("fig1_combined.png", plot = fig1, width = 10, height =5, dpi = 300)
+ggsave("fig1a_bar.png", plot = fig1a_bar, width = 9, height = 5, bg = "transparent")
+ggsave("fig1a_sub_bar.png", plot = fig1a_sub_bar, width = 9, height = 5, bg = "transparent")
+ggsave("fig1b_bar.png", plot = fig1b_bar, width = 9, height = 5, bg = "transparent") #save fig1b with a transparent background
+ggsave("fig1c_bar.png", plot = fig1c_bar, width = 9, height = 5, bg = "transparent")
+ggsave("fig1d_bar.png", plot = fig1d_bar, width = 9, height = 5, bg = "transparent")
+#ggsave("fig1e_bar.png", plot = fig1e_bar, width = 9, height = 5, bg = "transparent")
+```
+
+
+
+
