@@ -32,7 +32,8 @@ library(patchwork)
 data <- read.csv(here("data.csv"), na.strings = c("", "NA")) %>% #read in data with empty cells as NA
   clean_names() %>%
   select(-magnitude) %>% 
-  select(-mechanism) #%>% 
+  select(-mechanism) %>% 
+  mutate(habitat_type = ifelse(habitat_type == "subtropical", "tropical", habitat_type))
   #na.omit() #omit NAs
 
 data_unique <- data %>% 
@@ -49,6 +50,7 @@ font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts sit
 
 #standard font size for all graphs
 global_size = 14
+
 ```
 
 ## Background 
@@ -95,26 +97,41 @@ fig1
 
 ### Assemblage Information
 How much each assemblage type was studied proportionally. I don't know if it would make sense to manually group some of the assemblage types for data analysis/more refined visuals (I did this for the metrics later on).
-```{r assemblages and species, fig.width=20}
+```{r assemblages and species, fig.width=10}
 assemblage_all <- data %>% 
   count(assemblage_type) %>% 
   mutate(proportion = n /sum(n))
 
+#unique_assemblages <- data %>% 
+  #distinct(assemblage_type)
+
+#write_csv(unique_assemblages, "unique_assemblages.csv")
+
+lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
+
+assemblages_combined <- assemblage_all %>% 
+  left_join(lookup_table_assembl, by = "assemblage_type") %>% 
+  select(grouped_assemblage_highest) %>% 
+  group_by(grouped_assemblage_highest) %>% 
+  count(grouped_assemblage_highest, name = "n") %>% 
+  filter(!grouped_assemblage_highest == "na") %>%
+  ungroup() %>% 
+  mutate(proportion = (n / sum(n)))
+  
+
 #figure - first option
-fig_assemblage_proportion <- ggplot(data = assemblage_all, aes (x = reorder(assemblage_type, -proportion), y = proportion)) +
+fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, -n), y = n)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
   theme_classic(base_size = global_size) +
   labs(
     x = "Assemblage Type",
-    y = "Comparitive Number of Occurences"
+    y = "Number of Observations"
   ) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-fig_assemblage_proportion
-
-#figure simplified
+fig_assemblage
 
 
 ```
@@ -256,6 +273,11 @@ fig1d_bar <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effec
 
 fig1d_bar
 
+fig3 <- wrap_plots(fig1b_bar, fig1d_bar)
+
+fig3
+
+
 ```
 
 ### Heatmap 
@@ -283,6 +305,30 @@ heatmap_v2
 
 ggsave("heatmap_v2.png", plot = heatmap_v2, width = 10, height = 5, bg = "transparent")
 ```
+### MPA Effects by habitat type
+```{r}
+mpa_effects_by_habitat <- data %>% 
+  select(habitat_type, habitat_subtype, climate_effect, mpa_effect) %>% 
+  filter(!mpa_effect == "not_assessed") %>% 
+  filter(!habitat_subtype == "na") %>% 
+  filter(!habitat_type == "na") %>% 
+  group_by(habitat_type, habitat_subtype) %>% 
+  count(mpa_effect) %>% 
+  mutate(proportion = n /sum(n))
+
+ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, x = habitat_subtype)) + 
+  geom_bar(position = 'stack', stat = 'identity') + 
+  facet_wrap(vars(habitat_type)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = proportion, x = habitat_subtype)) + 
+  geom_bar(position = 'stack', stat = 'identity') + 
+  facet_wrap(vars(habitat_type)) +
+  theme_classic()
+```
+
+
 
 ### Metrics 
 Metrics used to measure each MPA effect type, not normalized (I'm planning to, I just ran out of time today.)

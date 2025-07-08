@@ -36,7 +36,7 @@ library(viridis)
 
 ```{r read in data, message = FALSE, warning = FALSE}
 #read in lit review data
-data <- read.csv(here("data2.csv")) %>% 
+data <- read.csv(here("data10.csv")) %>% 
   clean_names() %>% 
   select(-mpa_effect_size) #not currently considering this variable
 
@@ -243,7 +243,9 @@ count_n$n[is.na(count_n$n)] <- 0
 #refining steps: need to add labels to the bubbles, need to figure out ideal color for bubbles
 marine_realms <- ggplot() +
   geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
-  scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
+  scale_fill_manual(values = c("azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3")) +
+  #scale_fill_grey(start = 0.2, end = 0.8, na.value = "black", aesthetics = "fill" ) +
+  #scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
   #scale_color_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) +
   labs(
     fill = "",
@@ -266,12 +268,12 @@ marine_realms <- ggplot() +
   theme_classic() +
   guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
          color = FALSE) + #don't show color legend
-  ggtitle("Number of case studies conducted in each marine realm") +
+  #ggtitle("Number of case studies conducted in each marine realm") +
   theme(plot.title = element_text(hjust = 0.5))   #move title to center
 
 marine_realms
 
-ggsave("marine_realms_map.png", plot = marine_realms, width = 8, height = 6, dpi = 800)
+ggsave("marine_realms_map.png", plot = marine_realms, width = 8, height = 6, dpi = 800, bg = "transparent")
 
 ```
 
@@ -302,16 +304,18 @@ habitat_counts <- habitat_tokens %>%
 
 ## Mechanisms for MPA effectiveness
 
+Make a word cloud of mechanims details for preliminary data vis
+
 ```{r mechanisms, message = FALSE, warning = FALSE}
 ### make a word cloud ###
 
 #make a dataframe with just mechanisms, excluding the rest of the data
 mechanisms <- data %>% 
-  select(mechanism)
+  select(mechanism_details)
 
 #make a dataframe with unnested tokens (one word per row)
 mech_tokens <- mechanisms %>% 
-  unnest_tokens(word, mechanism) %>% #### note to self: correct spelling after uploading new datasheet ####
+  unnest_tokens(word, mechanism_details) %>% #### note to self: correct spelling after uploading new datasheet ####
   anti_join(stop_words) #remove stopwords
 
 #count number of every word
@@ -337,6 +341,15 @@ ggplot(data = top_121, aes(label = word)) +
 
 
 ```
+```{r mechanisms, message = FALSE, warning = FALSE}
+m_key <- data %>% 
+  select(mechanism_key)
+
+key_counts <- m_key %>% 
+  count(mechanism_key_action_leads_to_consequence)
+
+```
+
 
 
 ## Next Steps
