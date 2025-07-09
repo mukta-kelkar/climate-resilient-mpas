@@ -1,0 +1,364 @@
+---
+title: "Explore Data for Climate Resilient MPAs Lit Review"
+author: "Mukta Kelkar"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+#tidyverse packages
+library(here)
+library(janitor)
+library(dplyr)
+library(tidyverse)
+
+#spatial data
+library(sf)
+
+#text analysis
+library(tidytext)
+library(textdata)
+library(ggwordcloud)
+
+#print pretty tables
+library(gt)
+library(kableExtra)
+
+#misc
+library(viridis)
+
+```
+
+## Read in data
+
+```{r read in data, message = FALSE, warning = FALSE}
+#read in lit review data
+data <- read.csv(here("data10.csv")) %>% 
+  clean_names() %>% 
+  select(-mpa_effect_size) #not currently considering this variable
+
+#read in MEOW TNC Shapefile
+meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
+  clean_names()
+
+#make MPA effects definitions dataframe
+definitions <- data.frame(mpa_effect = c("Mitigation", "Resilience", "Offset Mortality"),
+                          definition = c("MPA stops climate effect directly", "MPA supports more resilient ecosystem", "offsets mortality by restricting industry"))
+```
+
+## MPA Effects
+
+Print a table of MPA effects definitions
+
+```{r, message = FALSE, warning = FALSE}
+#make table
+mpatable <- definitions %>% 
+  kbl(col.names = c("MPA Effect",
+                    "Definition")
+    
+  ) %>% 
+  kable_styling(full_width = F, html_font = "Arial") %>% 
+  row_spec(1:3, color = "black")
+  
+
+#print table
+mpatable
+
+
+#save table as .png
+save_kable(x = mpatable, file = "MPA Table.png", zoom = 5)
+
+```
+
+Use `ggplot2` to make a bar graph showing the number of occurences of each mpa effect.
+
+```{r mpa effect table, message = FALSE, warning = FALSE}
+effect_counts <- data %>% 
+  count(mpa_effect)
+ 
+#temp <- effect_counts[-c(1), ]
+
+#create a bar graph to visualize types of mpa effect
+mpaeffect_bargraph <- ggplot(data = effect_counts, aes(x = mpa_effect, y = n)) +  #create plot with MPA effect on the x axis and counts on the y-axis
+  geom_col(width = 0.75, fill = "#25858EFF") +      #use a bar graph format with slightly narrower bars and fill color steelblue3
+  geom_text(aes(label = n), vjust = -.5, size = 5) +    #add labels to columns
+  labs(               #rename y-axis, delete x-axis label, and provide a caption
+    y = "",
+    x = "",
+    title = "Number of case studies by type of MPA effect"
+    #caption = "Figure 1: Most MPAs either show Effect B (support a more resilient ecosystem) or have no effect."
+  ) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 14, angle = 20, hjust = 1, color = "gray6" ),    #change size, angle, positioning, and color of x-axis tick labels
+        plot.caption = element_text(size = 12),        #set font size for caption text
+        axis.text.y = element_blank(),      #delete y axis text
+        axis.ticks.y = element_blank(),    #delete y axis ticks
+        panel.grid.major = element_blank(),    #delete major grid lines
+        panel.grid.minor = element_blank(),     #delete minor grid lines
+        panel.background = element_rect(fill = "white"),   #make background color white
+        axis.line.x = element_blank(),    #delete axis line
+        axis.line.y = element_blank(),    #delete axis line
+        plot.title = element_text(hjust = 0.5))+ #center title
+  expand_limits(y = 29) + #expand limits of y axis so labels on top of the columns don't get cut off
+  scale_x_discrete(labels = c("Mitigation", "Resilience", "Offset Mortality", "Negative Effects", "No Effect"))  #rename x-axis labels
+
+mpaeffect_bargraph #prints graph into knitted document
+
+# Save the ggplot as a .png file
+ggsave("mpa_effects_bargraph.png", plot = mpaeffect_bargraph, width = 8, height = 4, dpi = 600)
+
+```
+
+Next, I dug into which habitat and geography scenarios were associated with each MPA effect.
+
+```{r, message = FALSE, warning = FALSE}
+# negative effect
+negative_effect <- data %>% 
+  filter(mpa_effect == "negative_effect")
+
+# no effect
+no_effect <- data %>% 
+  filter(mpa_effect == "no_effect")
+
+# effect_a, mpa stops climate effect directly
+effect_a <- data %>% 
+  filter(mpa_effect == "effect_a")
+
+# effect b, mpa supports more resilient ecosystem
+effect_b <- data %>% 
+  filter(mpa_effect == "effect_b")
+
+# effect c, offsets mortality by restricting industry
+effect_c <- data %>% 
+  filter(mpa_effect == "effect_c")
+
+
+```
+
+After that, I parsed out which climate effects and geographies most applied to each mpa effect
+
+```{r, message = FALSE, warning = FALSE}
+#save list of mpa effects
+effect_list <- unique(data$mpa_effect)
+
+# create empty dataframe
+mpa_habitats <- data.frame(matrix(ncol = 3, nrow = length(effect_list)))
+
+#provide column names
+colnames(mpa_habitats) <- c("mpa_effect", "habitat", "realm")
+
+for(i in 1:length(effect_list)) {  #for every element starting with the first element
+  
+  #filter by mpa effect and save to holding vector `effect`
+  effect <- data %>% filter(mpa_effect == effect_list[i]) 
+  
+  #make list of all habitats and save to holding vector `habs`
+  habs <- unique(effect$habitat_type)   
+  
+  #delete nas, save to holding vector `habs_no_na`
+  habs_no_na <- toString(as.list(habs[!habs == "na"])) #save unique values as a list, and then put the entire list in one cell of the holding vector
+  
+  #make a list of all marine realms holding vector `re`
+  re <- toString(as.list(unique(effect$marine_ecoregion))) #save unique values as a list, and then put the entire list in one cell of the holding vector
+  
+  #create a holding vector to append as a row to the dataframe
+  vec <- c((effect_list[i]),(habs_no_na), (re)) # create vector of mpa effect, habitat, and marine ecoregion
+  
+  #append rows to dataframe
+  mpa_habitats[i,] <- vec
+}
+
+
+#drop rows where mpa_effect cell is blank (delete this line later)
+mpa_eff_habitats <- mpa_habitats %>% 
+  filter(!(mpa_effect == ""))
+
+#make table
+effects_table <- mpa_eff_habitats %>% 
+  kbl() %>% 
+  kable_styling("hover", full_width = F)
+
+#print table
+effects_table
+
+
+```
+
+
+## Geographic distribution of existing studies
+
+some code from: https://www.imachordata.com/2015/03/28/meow-its-marine-ecoregions-in-r-2/ 
+
+```{r geography, message = FALSE, warning = FALSE}
+location_counts <- data %>% 
+  count(marine_ecoregion)
+
+#temp2 <- location_counts[-c(1), ]
+
+#bar plot of country locations
+ggplot(data = location_counts, aes(x = marine_ecoregion, y = n)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=.4))
+
+#make spatial polygon for marine realms
+realms <- meow %>%
+  group_by(realm) %>%
+  summarize(geometry = st_combine(geometry)) %>% 
+  mutate(realm = recode(realm,
+                        "Arctic" = "arctic",
+                        "Central Indo-Pacific" = "central_indo_pacific",
+                        "Eastern Indo-Pacific" = "eastern_indo_pacific",
+                        "Southern Ocean" = "southern_ocean",
+                        "Temperate Australasia" = "temperate_autralasia",
+                        "Temperate Northern Atlantic" = "temperate_northern_atlantic",
+                        "Temperate Northern Pacific" = "temperate_northern_pacific",
+                        "Temperate South America" = "temperate_south_america",
+                        "Temperate Southern Africa" = "temperate_southern_africa",
+                        "Tropical Atlantic" = "tropical_atlantic",
+                        "Tropical Eastern Pacific" = "tropical_eastern_pacific",
+                        "Western Indo-Pacific" = "western_indo_pacific")) %>% 
+  rename(marine_ecoregion = realm)
+
+#create manual coordinates for temperate_northern_pacific centroid
+new_coordinates <- st_point(c(-125, 38))
+
+#find centroids of each ecoregion
+symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE) %>% 
+  assign_in(list(2,7), new_coordinates) #manually replace temperate_northern_pacific centroid
+
+#df <- symbol_pos %>% 
+ # filter(marine_ecoregion == "temperate_northern_pacific") %>% 
+  #mutate(geometry = new_coordinates)
+
+#join centroids of each ecoregion to counts data, so that the counts data can be placed at the centroid on the map
+count_n <- left_join(symbol_pos, location_counts, by = "marine_ecoregion")
+
+#change NAs to 0s
+count_n$n[is.na(count_n$n)] <- 0
+
+#make a plot
+#refining steps: need to add labels to the bubbles, need to figure out ideal color for bubbles
+marine_realms <- ggplot() +
+  geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
+  scale_fill_manual(values = c("azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3", "azure3")) +
+  #scale_fill_grey(start = 0.2, end = 0.8, na.value = "black", aesthetics = "fill" ) +
+  #scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
+  #scale_color_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) +
+  labs(
+    fill = "",
+    caption = "This map does not include 4 global studies and 5 studies in the northern hemisphere."
+  ) +
+  geom_sf(data = count_n, 
+          pch = 21, 
+          aes(size = n,
+              color = "red"),
+          fill = "red",
+          show.legend = FALSE) +
+  scale_size(range = c(0, 9)) +      #adjust size of bubbles on map
+  geom_text(data = count_n, #add a geom for labels of the bubble sizes
+            aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[, 2],   #add x and y values to geom_text
+              nudge_x = 0.5, nudge_y = 0.5, label = n)) +    #add data labels to each bubble
+  labs(
+    x = "",
+    y = ""
+  ) +
+  theme_classic() +
+  guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
+         color = FALSE) + #don't show color legend
+  #ggtitle("Number of case studies conducted in each marine realm") +
+  theme(plot.title = element_text(hjust = 0.5))   #move title to center
+
+marine_realms
+
+ggsave("marine_realms_map.png", plot = marine_realms, width = 8, height = 6, dpi = 800, bg = "transparent")
+
+```
+
+## Type of habitats studied
+
+```{r habitats, message = FALSE, warning = FALSE}
+#make a word cloud
+ 
+#make a dataframe with just habitat_types
+habitats <- data %>% 
+  select(habitat_type) 
+
+#make a dataframe with unnested tokens (one word per row)
+habitat_tokens <- habitats %>% 
+  unnest_tokens(word, habitat_type) %>% 
+  anti_join(stop_words) %>% #remove stopwords
+  filter(!(word %in% c("na", "reef", "forest"))) #delete na values and the word reef and forest
+         
+#count number of every word
+habitat_counts <- habitat_tokens %>% 
+  count(word) %>% 
+  arrange(-n) #order words from most used to least used
+
+
+```
+
+## Ecosystem characteristics 
+
+## Mechanisms for MPA effectiveness
+
+Make a word cloud of mechanims details for preliminary data vis
+
+```{r mechanisms, message = FALSE, warning = FALSE}
+### make a word cloud ###
+
+#make a dataframe with just mechanisms, excluding the rest of the data
+mechanisms <- data %>% 
+  select(mechanism_details)
+
+#make a dataframe with unnested tokens (one word per row)
+mech_tokens <- mechanisms %>% 
+  unnest_tokens(word, mechanism_details) %>% #### note to self: correct spelling after uploading new datasheet ####
+  anti_join(stop_words) #remove stopwords
+
+#count number of every word
+mech_counts <- mech_tokens %>% 
+  count(word) %>% 
+  arrange(-n) #order words from most used to least used
+
+#make a dataframe of the top 300 words
+top_121 <- mech_counts %>% 
+  arrange(-n) %>%  #arrange in descending order by count
+  slice(1:121)  # keep only the top 121 words (omits all words that only occur once)
+  
+# make a word cloud
+ggplot(data = top_121, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n)) +
+  scale_size_area(max_size = 9) + #increases text size
+  scale_color_gradientn(colors = c("deepskyblue", "darkorchid3", "turquoise", "palevioletred")) +
+  labs(
+    title = "Top 121 words describing MPA mechanisms",
+    caption = "Omits all words that only occurred once"
+  ) +
+  theme_minimal()
+
+
+```
+```{r mechanisms, message = FALSE, warning = FALSE}
+m_key <- data %>% 
+  select(mechanism_key)
+
+key_counts <- m_key %>% 
+  count(mechanism_key_action_leads_to_consequence)
+
+```
+
+
+
+## Next Steps
+
+- which ecosystems are in each ecoregion?
+- which MPA effects are in each ecoregion?
+- The distinction between mitigation and resilience is confusing
+
+
+
+
+
