@@ -48,8 +48,17 @@ meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>%
 font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
                 family = "worksans")
 
-#standard font size for all graphs
-global_size = 14
+#standard theme for all graphs
+my_theme <- theme_classic() +
+  theme(base_size = 14)
+        #axis.text.x = element_text(angle = 45, hjust = 1))
+
+#source for standard color palettes: https://www.simplifiedsciencepublishing.com/resources/best-color-palettes-for-scientific-figures-and-data-visualizations
+#for mpa effect, use six color combination from "Divergent"
+divergent_palette <- c("#2066a8", "#8ec1da", "#cde1ec", "#f6d6c2", "#d47264", "#ae282c")
+
+#for climate effect, use six color combination from "qualitative"
+climate_colors <- c("#cecece", "#a559aa", "#59a89c", "#f0c571", "#e02b35", "#082a54")
 
 ```
 
@@ -58,7 +67,7 @@ global_size = 14
 Number of case studies in each habitat type and habitat subtype. Filtered so that each case study is only represented once.
 ```{r habitat and subhabitat type, message = FALSE}
 #figure 1a
-habitat_counts <- data_unique %>% 
+habitat_counts <- data %>% 
   count(habitat_type) #make dataset with counts data
 
 tropic_total <- habitat_counts[habitat_counts$habitat_type == "tropical", "n"]
@@ -67,21 +76,23 @@ habitat_total <- habitat_counts %>% summarize(total = sum(n))
 tropic_percent <- tropic_total/habitat_total
 temperate_percent <- temperate_total/habitat_total
 
-
-#figure 1a_bar
-fig1a_bar <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, -n), y = n)) +
-  geom_bar(stat = "identity", width = .75) +   #set up bar chart
-  theme_classic(base_size = global_size) +
+#figure 1a
+fig1a <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), y = n)) +
+  geom_col(width = 0.7) +
   labs(
     x = "Habitat Type",
-    y = "Number of Occurences"
+    y = ""
   ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  my_theme +
+  scale_x_discrete(labels = c("tropical" = "Tropical", 
+                              "temperate" = "Temperate", 
+                              "na" = "NA"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,119)
 
-#figure 1a_sub
-subhabitat_counts <- data_unique %>% 
+#figure 1b
+subhabitat_counts <- data %>% 
   count(habitat_subtype) #make dataset with counts data
 
 subhabitat_total <- subhabitat_counts %>% summarize(total = sum(n))
@@ -93,19 +104,29 @@ kelp_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "kelp_fores
 kelp_percent <- kelp_total/subhabitat_total
 
 
-#figure 1a_bar
-fig1a_sub_bar <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, -n), y = n)) +
-  geom_bar(stat = "identity", width = .75) +   #set up bar chart
-  theme_classic(base_size = global_size) +
+#figure 1b
+fig1b <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, n), y = n)) +
+  geom_col(width = 0.7) +
   labs(
     x = "Habitat Subtype",
-    y = "Number of Occurences"
+    y = ""
   ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  my_theme +
+  scale_x_discrete(labels = c("coral_reef" = "Coral Reef",
+                              "rocky_reef" = "Rocky Reef",
+                              "na" = "NA",
+                              "kelp_forest" = "Kelp Forest",
+                              "shallow_reef" = "Shallow Reef",
+                              "seagrass" = "Seagrass",
+                              "deep_reef" = "Deep Reef",
+                              "intertidal" = "Intertidal"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,119)
 
-fig1 <- wrap_plots(fig1a_bar, fig1a_sub_bar)
+
+
+fig1 <- wrap_plots(fig1a, fig1b)
 
 #print figure
 fig1
@@ -113,7 +134,7 @@ fig1
 
 ### Assemblage Information
 How much each assemblage type was studied proportionally. I don't know if it would make sense to manually group some of the assemblage types for data analysis/more refined visuals (I did this for the metrics later on).
-```{r assemblages and species, fig.width=10}
+```{r assemblages and species, fig.width=6, fig.height=9}
 assemblage_all <- data %>% 
   count(assemblage_type) %>% 
   mutate(proportion = n /sum(n))
@@ -134,18 +155,30 @@ assemblages_combined <- assemblage_all %>%
   mutate(proportion = (total / sum(total)))
 
 #figure - first option
-fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, -total), y = total)) +
-  geom_bar(stat = "identity", width = .75) +   #set up bar chart
-  theme_classic(base_size = global_size) +
+fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, total), y = total)) +
+  geom_col() +   #set up bar chart
   labs(
     x = "Assemblage Type",
-    y = "Number of Observations"
+    y = ""
   ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  my_theme +
+  scale_x_discrete(labels = c("fish" = "Fish",
+                              "na" = "NA",
+                              "coral" = "Coral",
+                              "benthic" = "Benthic",
+                              "invertebrates" = "Invertebrates",
+                              "macroalgae" = "Macroalgae"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,119)
 
-fig_assemblage
+  
+
+figure_1 <- (fig1a / fig1b / fig_assemblage) +
+  theme(axis.title.x = element_blank()) +
+  plot_annotation(caption = "Number of Occurrances")
+
+figure_1
 
 
 ```
@@ -241,41 +274,82 @@ marine_realms <- ggplot() +
 marine_realms
 ```
 
-
 ## Map
-
-```{r}
+```{r, fig.width=10, fig.height=8}
 map_latlong <- data %>% 
-  select(climate_effect, mpa_effect, latitude, longitude)
+  select(climate_effect, mpa_effect, latitude, longitude) %>% 
+  mutate(
+    jitter_lat = jitter(latitude, amount = 5),
+    jitter_long = jitter(longitude, amount = 5)
+  )
 
 # Get world map data
 world_map <- map_data("world")
 
+#ggplot() +
+#  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
+#               fill = "gray90", color = NA) +
+#  geom_point(data = map_latlong, aes(x = longitude, y = latitude, color = climate_effect), size = 2) +
+#  scale_color_viridis_d(option = "magma") +
+#  coord_fixed(1.3) +  # Keeps aspect ratio of map
+#  theme_minimal() +
+#  theme(axis.title.x = element_blank(),
+#        axis.title.y = element_blank(),
+#        axis.text = element_blank()) +
+#  labs(title = "Geographic Distribution of Climate Effect",
+#       color = "Climate Effect")
+
+#ggplot() +
+#  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
+#               fill = "gray90", color = NA) +
+#  geom_jitter(data = map_latlong, aes(x = longitude, y = latitude, color = climate_effect), 
+#              width = 5, height = 5, size = 1.75) +
+#  scale_color_viridis_d(option = "magma") +
+#  coord_fixed(1.3) +  # Keeps aspect ratio of map
+#  theme_minimal() +
+#  theme(axis.title.x = element_blank(),
+#        axis.title.y = element_blank(),
+#        axis.text = element_blank()) +
+#  labs(title = "Geographic Distribution of Climate Effect",
+#       color = "Climate Effect")
+
 map_climate <- ggplot() +
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
-               fill = "gray90", color = "gray70") +
-  geom_point(data = map_latlong, aes(x = longitude, y = latitude, color = climate_effect), size = 2) +
-  scale_color_viridis_d(option = "magma") +
+               fill = "gray90", color = NA) +
+  geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = climate_effect), size = 1.75) +
   coord_fixed(1.3) +  # Keeps aspect ratio of map
   theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank()) +
   labs(title = "Geographic Distribution of Climate Effect",
-       x = "Longitude", y = "Latitude")
+       color = "Climate Effect") +
+  scale_color_discrete(labels = c("body_size" = "Body Size",
+                                 "disease_parasite" = "Disease & Parasitism",
+                                 "habitat_formation" = "Habitat Formation",
+                                 "mortality" = "Mortality",
+                                 "movement_range" = "Movement & Range Shifts",
+                                 "phenology" = "Phenology",
+                                 "reproduction" = "Reproduction")) +
+  scale_color_manual(values = climate_colors)
+
+                      # type = c("#cecece", "#a559aa", "#59a89c", "#f0c571", "#e02b35", "#082a54"))
 
 map_mpa <- ggplot() +
   geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
-               fill = "gray90", color = "gray70") +
-  geom_point(data = map_latlong, aes(x = longitude, y = latitude, color = mpa_effect), size = 2) +
+               fill = "gray90", color = NA) +
+   geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = mpa_effect), size = 1.75) +
   scale_color_viridis_d(option = "virdis") +
   coord_fixed(1.3) +  # Keeps aspect ratio of map
   theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
   labs(title = "Geographic Distribution of MPA Effect",
-       x = "Longitude", y = "Latitude")
+       color = "MPA Effect")
 
 map_climate
 map_mpa
 ```
-
-
 
 ## Frameworks
 ### MPA  & Climate Effects
@@ -370,6 +444,9 @@ ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, x = habitat_
   geom_bar(position = 'stack', stat = 'identity') + 
   facet_wrap(vars(habitat_type)) +
   theme_classic() +
+  labs(
+    fill = "MPA Effect"
+  ) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = proportion, x = habitat_subtype)) + 
