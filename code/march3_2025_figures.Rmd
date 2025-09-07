@@ -11,7 +11,6 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 #tidyverse packages
 library(here)
 library(janitor)
-library(dplyr)
 library(tidyverse)
 
 #spatial data
@@ -19,9 +18,6 @@ library(sf)
 
 #datavis
 library(RColorBrewer)
-library(showtext)
-library(pals)
-library(rcartocolor)
 library(gridExtra)
 library(patchwork)
 ```
@@ -45,8 +41,8 @@ meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>%
   clean_names()
 
 #add google fonts to working memory for figures
-font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
-                family = "worksans")
+#font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
+#                family = "worksans")
 
 #standard theme for all graphs
 my_theme <- theme_classic() +
@@ -55,10 +51,20 @@ my_theme <- theme_classic() +
 
 #source for standard color palettes: https://www.simplifiedsciencepublishing.com/resources/best-color-palettes-for-scientific-figures-and-data-visualizations
 #for mpa effect, use six color combination from "Divergent"
-divergent_palette <- c("#2066a8", "#8ec1da", "#cde1ec", "#f6d6c2", "#d47264", "#ae282c")
+mpa_colors <- c("positive_ecosystem" = "#2066a8", 
+                "positive_population" = "#cde1ec", 
+                "no_effect" = "grey60", 
+                "negative_population" = "#f6d6c2", 
+                "negative_ecosystem" = "#ae282c")
 
 #for climate effect, use six color combination from "qualitative"
-climate_colors <- c("#cecece", "#a559aa", "#59a89c", "#f0c571", "#e02b35", "#082a54")
+climate_colors <- c("body_size" = "#cecece", 
+                    "disease_parasite" = "#a559aa", 
+                    "habitat_formation" = "#59a89c", 
+                    "mortality" = "#f0c571", 
+                    "movement_range" = "#e02b35", 
+                    "phenology" = "#082a54", 
+                    "reproduction" = "darkolivegreen")
 
 ```
 
@@ -89,7 +95,7 @@ fig1a <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), y = n)
                               "na" = "NA"),
                    drop = FALSE) +
   coord_flip() +
-  ylim(0,119)
+  ylim(0,130)
 
 #figure 1b
 subhabitat_counts <- data %>% 
@@ -139,8 +145,8 @@ assemblage_all <- data %>%
   count(assemblage_type) %>% 
   mutate(proportion = n /sum(n))
 
-#unique_assemblages <- data %>% 
-  #distinct(assemblage_type)
+unique_assemblages <- data %>% 
+  distinct(assemblage_type)
 
 #write_csv(unique_assemblages, "unique_assemblages.csv")
 
@@ -180,102 +186,119 @@ figure_1 <- (fig1a / fig1b / fig_assemblage) +
 
 figure_1
 
-
 ```
+
+```{r effect on target fish}
+assemblages_target <- data %>% 
+  select(assemblage_type, climate_effect, mpa_effect)
+
+lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
+
+assemblages_target_simple <- left_join(assemblages_target, lookup_table_assembl, by = "assemblage_type") %>% 
+  select(!c(grouped_assemblage_highest, grouped_assemblage_medium, assemblage_type))
+
+target_effect_counts <- assemblages_target_simple %>% 
+  group_by(mpa_effect, target_fish) %>% 
+  count(target_fish) %>% 
+  ungroup() %>% 
+  mutate(proportion = n /sum(n)) %>% 
+  filter(target_fish %in% c("target_fish", "non-target_fish"))
+```
+
 
 ### Geography
 Bar plot and map of which marine realms (defined by Marin Ecoregions of the World) the case studies were in. Filtered so that each case study is only represented once.
 ```{r figure 2: map of study sites, message = FALSE}
-ecoregion_counts <- data_unique %>% 
-  count(geographic_region) #make dataset with counts data
+#ecoregion_counts <- data_unique %>% 
+#  count(geographic_region) #make dataset with counts data
 
-ggplot(data = ecoregion_counts, aes(x = reorder(geographic_region, -n), y = n)) +
-  geom_col() +
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
+#ggplot(data = ecoregion_counts, aes(x = reorder(geographic_region, -n), y = n)) +
+#  geom_col() +
+#  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
 
-fig1c_bar <- ggplot(data = ecoregion_counts, aes (x = reorder(geographic_region, -n), y = n)) +
-  geom_bar(stat = "identity", width = .75, color = "white") +   #set up bar chart
-  theme_classic(base_size = global_size) +
-  labs(
-    x = "Ecoregion",
-    y = "Number of Occurences"
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+#fig1c_bar <- ggplot(data = ecoregion_counts, aes (x = reorder(geographic_region, -n), y = n)) +
+#  geom_bar(stat = "identity", width = .75, color = "white") +   #set up bar chart
+#  theme_classic(base_size = global_size) +
+#  labs(
+#    x = "Ecoregion",
+#    y = "Number of Occurences"
+#  ) +
+#  theme(
+#    axis.text.x = element_text(angle = 45, hjust = 1)
+#  )
 
 #make spatial polygon for marine realms
-realms <- meow %>%
-  group_by(realm) %>%
-  summarize(geometry = st_combine(geometry)) %>% 
-  mutate(realm = recode(realm,
-                        "Arctic" = "arctic",
-                        "Central Indo-Pacific" = "central_indo_pacific",
-                        "Eastern Indo-Pacific" = "eastern_indo_pacific",
-                        "Southern Ocean" = "southern_ocean",
-                        "Temperate Australasia" = "temperate_autralasia",
-                        "Temperate Northern Atlantic" = "temperate_northern_atlantic",
-                        "Temperate Northern Pacific" = "temperate_northern_pacific",
-                        "Temperate South America" = "temperate_south_america",
-                        "Temperate Southern Africa" = "temperate_southern_africa",
-                        "Tropical Atlantic" = "tropical_atlantic",
-                        "Tropical Eastern Pacific" = "tropical_eastern_pacific",
-                        "Western Indo-Pacific" = "western_indo_pacific")) %>% 
-  rename(marine_ecoregion = realm)
+#realms <- meow %>%
+#  group_by(realm) %>%
+#  summarize(geometry = st_combine(geometry)) %>% 
+#  mutate(realm = recode(realm,
+#                        "Arctic" = "arctic",
+#                        "Central Indo-Pacific" = "central_indo_pacific",
+#                        "Eastern Indo-Pacific" = "eastern_indo_pacific",
+#                        "Southern Ocean" = "southern_ocean",
+#                        "Temperate Australasia" = "temperate_autralasia",
+#                        "Temperate Northern Atlantic" = "temperate_northern_atlantic",
+#                        "Temperate Northern Pacific" = "temperate_northern_pacific",
+#                        "Temperate South America" = "temperate_south_america",
+#                        "Temperate Southern Africa" = "temperate_southern_africa",
+#                        "Tropical Atlantic" = "tropical_atlantic",
+#                        "Tropical Eastern Pacific" = "tropical_eastern_pacific",
+#                        "Western Indo-Pacific" = "western_indo_pacific")) %>% 
+#  rename(marine_ecoregion = realm)
 
 #create manual coordinates for temperate_northern_pacific centroid
-new_coordinates <- st_point(c(-125, 38))
+#new_coordinates <- st_point(c(-125, 38))
 
 #find centroids of each ecoregion
-symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE) %>% 
-  assign_in(list(2,7), new_coordinates) %>% #manually replace temperate_northern_pacific centroid
-  rename(geographic_region = marine_ecoregion)
+#symbol_pos <- st_centroid(realms, of_largest_polygon = TRUE) %>% 
+#  assign_in(list(2,7), new_coordinates) %>% #manually replace temperate_northern_pacific centroid
+#  rename(geographic_region = marine_ecoregion)
 
 #df <- symbol_pos %>% 
  # filter(marine_ecoregion == "temperate_northern_pacific") %>% 
   #mutate(geometry = new_coordinates)
 
 #join centroids of each ecoregion to counts data, so that the counts data can be placed at the centroid on the map
-count_n <- left_join(symbol_pos, ecoregion_counts, by = "geographic_region")
+#count_n <- left_join(symbol_pos, ecoregion_counts, by = "geographic_region")
 
 #change NAs to 0s
-count_n$n[is.na(count_n$n)] <- 0
+#count_n$n[is.na(count_n$n)] <- 0
 
 #make a plot
 #refining steps: need to add labels to the bubbles, need to figure out ideal color for bubbles
-marine_realms <- ggplot() +
-  geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
-  scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
+#marine_realms <- ggplot() +
+#  geom_sf(data = realms, aes(fill = marine_ecoregion, color = NA)) +
+#  scale_fill_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) + #specifies colors from virdis package manually. this is a workaround to avoid getting the error " Discrete value supplied to continuous scale" when using `scale_fill_viridis`. `scale_fill_gray` worked because its more flexible
   #scale_color_manual(values = viridis::viridis(length(unique(realms$marine_ecoregion)))) +
-  labs(
-    fill = "",
-    caption = "This map does not include 4 global studies and 5 studies in the northern hemisphere."
-  ) +
-  geom_sf(data = count_n, 
-          pch = 21, 
-          aes(size = n,
-              color = "red"),
-          fill = "red",
-          show.legend = FALSE) +
-  scale_size(range = c(0, 9)) +      #adjust size of bubbles on map
-  geom_text(data = count_n, #add a geom for labels of the bubble sizes
-            aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[, 2],   #add x and y values to geom_text
-              nudge_x = 0.5, nudge_y = 0.5, label = n)) +    #add data labels to each bubble
-  labs(
-    x = "",
-    y = ""
-  ) +
-  theme_classic() +
-  guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
-         color = FALSE) + #don't show color legend
-  ggtitle("Number of case studies conducted in each marine realm") +
-  theme(plot.title = element_text(hjust = 0.5))   #move title to center
-
-marine_realms
+#  labs(
+#    fill = "",
+#    caption = "This map does not include 4 global studies and 5 studies in the northern hemisphere."
+#  ) +
+#  geom_sf(data = count_n, 
+#          pch = 21, 
+#          aes(size = n,
+#              color = "red"),
+#          fill = "red",
+#          show.legend = FALSE) +
+#  scale_size(range = c(0, 9)) +      #adjust size of bubbles on map
+#  geom_text(data = count_n, #add a geom for labels of the bubble sizes
+#            aes(x = st_coordinates(geometry)[,1], y = st_coordinates(geometry)[, 2],   #add x and y values to geom_text
+#              nudge_x = 0.5, nudge_y = 0.5, label = n)) +    #add data labels to each bubble
+#   labs(
+#     x = "",
+#     y = ""
+#   ) +
+#   theme_classic() +
+#   guides(fill = guide_legend(key_glyph = "point", override.aes = list(color = "white")),  #set legend key as a point, and then change the legend key color to white
+#          color = FALSE) + #don't show color legend
+#   ggtitle("Number of case studies conducted in each marine realm") +
+#   theme(plot.title = element_text(hjust = 0.5))   #move title to center
+# 
+# marine_realms
 ```
 
 ## Map
-```{r, fig.width=10, fig.height=8}
+```{r figure 2, fig.width=9, fig.height=5}
 map_latlong <- data %>% 
   select(climate_effect, mpa_effect, latitude, longitude) %>% 
   mutate(
@@ -283,8 +306,81 @@ map_latlong <- data %>%
     jitter_long = jitter(longitude, amount = 5)
   )
 
+#count number of occurrences in western US coast
+west_US_bbox <- map_latlong %>% 
+  filter(latitude < 48.5, latitude > 32.5, 
+         longitude < -117, longitude > -126) %>% 
+  mutate(count = n())
+
+#count number of occurrences in Caribbean coast
+carribean_bbox <- map_latlong %>% 
+  filter(latitude < 27, latitude > 7, 
+         longitude < -58.7, longitude > -91) %>% 
+  mutate(count = n())
+  
+#count number of occurrences in European coast
+europe_bbox <- map_latlong %>% 
+  filter(latitude < 68, latitude > 26.8, 
+         longitude > -28.7, longitude < 58.1) %>% 
+  mutate(count = n())
+
+#count number of occurrences in SE Asia coast
+se_asia_bbox <- map_latlong %>% 
+  filter(latitude < 28.7, latitude > -11.2, 
+         longitude > 86.4, longitude < 160) %>% 
+  mutate(count = n())
+
+#count number of occurrences in Australian coast
+australia_bbox <- map_latlong %>% 
+  filter(latitude < -10.3, latitude > -38.7, 
+         longitude > 109.1, longitude < 160) %>% 
+  mutate(count = n())
+
+#count number of occurrences in Tasmanian coast
+tasmania_bbox <- map_latlong %>% 
+  filter(latitude < -40, latitude > -44, 
+         longitude > 143.8, longitude < 149.2) %>% 
+  mutate(count = n())
+
 # Get world map data
 world_map <- map_data("world")
+
+map_climate <- ggplot() +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
+               fill = "gray90", color = NA) +
+  geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = climate_effect), size = 2) +
+  coord_fixed(1.3) +  # Keeps aspect ratio of map
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank()) +
+  labs(title = "Geographic Distribution of Climate Effect",
+       color = "Climate Effect") +
+  scale_color_discrete(labels = c("body_size" = "Body Size",
+                                 "disease_parasite" = "Disease & Parasitism",
+                                 "habitat_formation" = "Habitat Formation",
+                                 "mortality" = "Mortality",
+                                 "movement_range" = "Movement & Range Shifts",
+                                 "phenology" = "Phenology",
+                                 "reproduction" = "Reproduction")) +
+  scale_color_manual(values = climate_colors)
+
+map_mpa <- ggplot() +
+  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
+               fill = "gray90", color = NA) +
+  geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = mpa_effect), size = 2) +
+  coord_fixed(1.3) +  # Keeps aspect ratio of map
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(title = "Geographic Distribution of MPA Effect",
+       color = "MPA Response Type",
+       caption = "Figure ") +
+  scale_color_manual(values = mpa_colors)
+
+
+map_climate
+map_mpa
 
 #ggplot() +
 #  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
@@ -312,94 +408,62 @@ world_map <- map_data("world")
 #        axis.text = element_blank()) +
 #  labs(title = "Geographic Distribution of Climate Effect",
 #       color = "Climate Effect")
-
-map_climate <- ggplot() +
-  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
-               fill = "gray90", color = NA) +
-  geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = climate_effect), size = 1.75) +
-  coord_fixed(1.3) +  # Keeps aspect ratio of map
-  theme_minimal() +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text = element_blank()) +
-  labs(title = "Geographic Distribution of Climate Effect",
-       color = "Climate Effect") +
-  scale_color_discrete(labels = c("body_size" = "Body Size",
-                                 "disease_parasite" = "Disease & Parasitism",
-                                 "habitat_formation" = "Habitat Formation",
-                                 "mortality" = "Mortality",
-                                 "movement_range" = "Movement & Range Shifts",
-                                 "phenology" = "Phenology",
-                                 "reproduction" = "Reproduction")) +
-  scale_color_manual(values = climate_colors)
-
-                      # type = c("#cecece", "#a559aa", "#59a89c", "#f0c571", "#e02b35", "#082a54"))
-
-map_mpa <- ggplot() +
-  geom_polygon(data = world_map, aes(x = long, y = lat, group = group),
-               fill = "gray90", color = NA) +
-   geom_point(data = map_latlong, aes(x = jitter_long, y = jitter_lat, color = mpa_effect), size = 1.75) +
-  scale_color_viridis_d(option = "virdis") +
-  coord_fixed(1.3) +  # Keeps aspect ratio of map
-  theme_minimal() +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  labs(title = "Geographic Distribution of MPA Effect",
-       color = "MPA Effect")
-
-map_climate
-map_mpa
 ```
 
 ## Frameworks
 ### MPA  & Climate Effects
 Proportion of occurrences of each MPA effect.
 ```{r mpa effects, message = FALSE}
-#figure 1b
+#figure 3a
 mpa_effect_counts <- data %>% 
   count(mpa_effect) %>% #make dataset with counts data
   mutate(proportion = n /sum(n))
 
-#figure 1b
-fig1b_bar <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, -proportion), y = proportion)) +
+#figure 3a
+fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n, fill = mpa_effect)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
-  theme_classic(base_size = global_size) +
   labs(
-    x = "MPA Effect Type",
-    y = "Proportion of Occurences"
+    x = "MPA Response Type",
+    y = "Number of Occurences"
   ) +
-  #scale_x_discrete(labels = c("None", "Ecosystem (+)", "Population", "Ecosystem (-)")) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  scale_x_discrete(labels = c("no_effect" = "No Effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)",
+                              "not_assessed" = "Not Assessed")) +
+  scale_fill_manual(values = mpa_colors) +
+  my_theme +
+  coord_flip()
 
-fig1b_bar
+fig3a
 ```
 
 Proportion of occurrences of each climate effect.
-```{r climate effects, message = FALSE}
-#figure 1d
+```{r climate effects, message = FALSE, fig.width=8, fig.height=6}
+#figure 3b data
 climate_counts_prelim <- data %>% 
   count(climate_effect) %>% #preliminary counts of climate effect (without separating rows with multiple categories)
   mutate(proportion = n /sum(n))
 
-#figure 1d
-fig1d_bar <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, -proportion), y = proportion)) +
+#figure 3b ggplot
+fig3b <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, n), y = n, fill = climate_effect)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
-  theme_classic(base_size = global_size) +
   labs(
-    x = "Ecological Effect of Climate Change",
-    y = "Proportion of Occurences"
+    x = "Ecological Impact of Climate Change",
+    y = "Number of Occurences"
   ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  my_theme +
+  scale_fill_manual(values = climate_colors) +
+  coord_flip()
 
-fig1d_bar
+fig3b #view figure
 
-fig3 <- wrap_plots(fig1b_bar, fig1d_bar)
+figure_3 <- (fig3a / fig3b) +
+  theme(axis.title.x = element_blank()) +
+  plot_annotation(caption = "Figure #: Number of occurrances of each MPA response type and each climate impact.")
 
-fig3
+figure_3
 
 
 ```
@@ -414,21 +478,24 @@ eco_effects <- data %>%
 heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect, fill = count)) +
   geom_tile() +
   labs(
-    x = "Climate Effect",
-    y = "MPA Effect"
+    x = "Climate Impact",
+    y = "MPA Response",
+    caption = str_wrap("Figure #: Number of occurrences for each combination of climate impact and MPA response. Color darkness corresponds to frequency with which each combination was observed.", width = 70)
   ) +
   #scale_y_discrete(labels = c("Ecosystem (+)", "Population", "Ecosystem (-)", "None")) +
   scale_fill_gradient2(low = "grey",
                       high = "black") +
-  theme_classic(base_size = global_size) +
+  theme_classic(base_size = 14) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.caption = element_text(hjust = 0, margin = margin(t = 5)),
   )
 
 heatmap_v2
 
 ggsave("heatmap_v2.png", plot = heatmap_v2, width = 10, height = 5, bg = "transparent")
 ```
+
 ### MPA Effects by habitat type
 ```{r}
 mpa_effects_by_habitat <- data %>% 
@@ -440,26 +507,33 @@ mpa_effects_by_habitat <- data %>%
   count(mpa_effect) %>% 
   mutate(proportion = n /sum(n))
 
-ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, x = habitat_subtype)) + 
+temperate <- mpa_effects_by_habitat %>% 
+  filter(habitat_type == "temperate")
+
+fig4 <- ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, x = habitat_subtype)) + 
   geom_bar(position = 'stack', stat = 'identity') + 
   facet_wrap(vars(habitat_type)) +
   theme_classic() +
   labs(
     fill = "MPA Effect"
   ) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  scale_fill_manual(values = mpa_colors)
 
 ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = proportion, x = habitat_subtype)) + 
   geom_bar(position = 'stack', stat = 'identity') + 
   facet_wrap(vars(habitat_type)) +
-  theme_classic()
+  theme_classic() +
+  scale_fill_manual(values = mpa_colors)
+
+fig4
 ```
 
 
 
 ### Metrics 
 Metrics used to measure each MPA effect type, not normalized (I'm planning to, I just ran out of time today.)
-```{r figure 6: metrics to measure, message=FALSE, fig.width=9, fig.height=10}
+```{r figure 5: metrics to measure, message=FALSE, fig.width=9, fig.height=10}
 metrics_measured <- data %>% 
   select(climate_effect, ecological_fitness_metric) %>% 
   group_by(climate_effect, ecological_fitness_metric) %>% 
@@ -477,7 +551,7 @@ metrics_combined <- metrics_measured %>%
   group_by(climate_effect, grouped_metric) %>% 
   summarise(total_count = sum(count), .groups = "drop")
   
-fig3 <- ggplot(data = metrics_combined, aes(x = grouped_metric, y = total_count)) +
+fig5 <- ggplot(data = metrics_combined, aes(x = grouped_metric, y = total_count, fill = )) +
   geom_bar(stat = "identity") +
   facet_wrap(~climate_effect, scales = "free_x") +
   theme_classic() +
@@ -489,9 +563,7 @@ fig3 <- ggplot(data = metrics_combined, aes(x = grouped_metric, y = total_count)
     y = "Number of Occurences"
   )
 
-fig3
-
-ggsave("fig3.png", plot = fig3, width = 9, height = 10, bg = "transparent")
+fig5
 
 ```
 
@@ -499,24 +571,38 @@ ggsave("fig3.png", plot = fig3, width = 9, height = 10, bg = "transparent")
 ## Print and Save Figures
 ```{r print figures, eval = FALSE}
 #print figures
-fig1a_bar
-fig1a_sub_bar
-fig1b_bar
-fig1c_bar
-fig1d_bar
-#fig1e_bar
+figure_1
+map_climate
+map_mpa
+figure_3
+heatmap_v2
+fig4
+fig5
+
+```
+
+
+```{r}
+data_neg <- data %>% 
+  filter(mpa_effect %in% c("negative_population", "negative_ecosystem"))
+
+data_pos <- data %>% 
+  filter(mpa_effect %in% c("positive_population", "positive_ecosystem"))
+
+data_null <- data %>% 
+  filter(mpa_effect == "no_effect")
 ```
 
 
 ```{r save figures, eval=FALSE}
-#save figures
-ggsave("fig1_combined.png", plot = fig1, width = 10, height =5, dpi = 300)
-ggsave("fig1a_bar.png", plot = fig1a_bar, width = 9, height = 5, bg = "transparent")
-ggsave("fig1a_sub_bar.png", plot = fig1a_sub_bar, width = 9, height = 5, bg = "transparent")
-ggsave("fig1b_bar.png", plot = fig1b_bar, width = 9, height = 5, bg = "transparent") #save fig1b with a transparent background
-ggsave("fig1c_bar.png", plot = fig1c_bar, width = 9, height = 5, bg = "transparent")
-ggsave("fig1d_bar.png", plot = fig1d_bar, width = 9, height = 5, bg = "transparent")
-#ggsave("fig1e_bar.png", plot = fig1e_bar, width = 9, height = 5, bg = "transparent")
+# #save figures
+# ggsave("fig1_combined.png", plot = fig1, width = 10, height =5, dpi = 300)
+# ggsave("fig1a_bar.png", plot = fig1a_bar, width = 9, height = 5, bg = "transparent")
+# ggsave("fig1a_sub_bar.png", plot = fig1a_sub_bar, width = 9, height = 5, bg = "transparent")
+# ggsave("fig1b_bar.png", plot = fig1b_bar, width = 9, height = 5, bg = "transparent") #save fig1b with a transparent background
+# ggsave("fig1c_bar.png", plot = fig1c_bar, width = 9, height = 5, bg = "transparent")
+# ggsave("fig1d_bar.png", plot = fig1d_bar, width = 9, height = 5, bg = "transparent")
+# #ggsave("fig1e_bar.png", plot = fig1e_bar, width = 9, height = 5, bg = "transparent")
 ```
 
 
