@@ -1,0 +1,70 @@
+---
+title: "Figure Formatting Setup"
+output: html_document
+date: "2025-09-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#tidyverse packages
+library(here)
+library(janitor)
+library(tidyverse)
+
+#spatial data
+library(sf)
+
+#datavis
+library(RColorBrewer)
+library(gridExtra)
+library(patchwork)
+```
+
+
+```{r read in data and set up fonts, message=FALSE}
+#read in lit review data
+data <- read.csv(here("data.csv"), na.strings = c("", "NA")) %>% #read in data with empty cells as NA
+  clean_names() %>%
+  select(-magnitude) %>% 
+  select(-mechanism) %>% 
+  mutate(habitat_type = ifelse(habitat_type == "subtropical", "tropical", habitat_type))
+  #na.omit() #omit NAs
+
+data_unique <- data %>% 
+  select(citation, topic, habitat_type, habitat_subtype, geographic_region) %>% #select variable that are constant within each case study
+  distinct(citation, habitat_type, geographic_region, .keep_all = TRUE)
+
+#read in MEOW TNC Shapefile
+meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
+  clean_names()
+
+#add google fonts to working memory for figures
+#font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
+#                family = "worksans")
+
+#standard theme for all graphs
+my_theme <- theme_classic() +
+  theme(base_size = 14)
+        #axis.text.x = element_text(angle = 45, hjust = 1))
+
+#source for standard color palettes: https://www.simplifiedsciencepublishing.com/resources/best-color-palettes-for-scientific-figures-and-data-visualizations
+#for mpa effect, use six color combination from "Divergent"
+mpa_colors <- c("positive_ecosystem" = "#2066a8", 
+                "positive_population" = "#cde1ec", 
+                "no_effect" = "grey60", 
+                "negative_population" = "#f6d6c2", 
+                "negative_ecosystem" = "#ae282c")
+
+#for climate effect, use six color combination from "qualitative"
+climate_colors <- c("body_size" = "#cecece", 
+                    "disease_parasite" = "#a559aa", 
+                    "habitat_formation" = "#59a89c", 
+                    "mortality" = "#f0c571", 
+                    "movement_range" = "#e02b35", 
+                    "phenology" = "#082a54", 
+                    "reproduction" = "darkolivegreen")
+
+```
+
+

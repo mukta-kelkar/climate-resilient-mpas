@@ -1,0 +1,120 @@
+---
+title: "Create Figure 2 - Habitats and Assemblages"
+output: html_document
+date: "2025-09-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r habitat type}
+#figure 1a
+habitat_counts <- data %>% 
+  count(habitat_type) #make dataset with counts data
+
+tropic_total <- habitat_counts[habitat_counts$habitat_type == "tropical", "n"]
+temperate_total <- habitat_counts[habitat_counts$habitat_type == "temperate", "n"]
+habitat_total <- habitat_counts %>% summarize(total = sum(n))
+tropic_percent <- tropic_total/habitat_total
+temperate_percent <- temperate_total/habitat_total
+
+#figure 1a
+fig_habitat <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), y = n)) +
+  geom_col(width = 0.8/8*3) +
+  labs(
+    x = "Habitat type",
+    y = ""
+  ) +
+  my_theme +
+  scale_x_discrete(labels = c("tropical" = "Tropical", 
+                              "temperate" = "Temperate", 
+                              "na" = "Not specified"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,130)
+
+```
+
+```{r habitat subtypes}
+#figure 1b
+subhabitat_counts <- data %>% 
+  count(habitat_subtype) #make dataset with counts data
+
+subhabitat_total <- subhabitat_counts %>% summarize(total = sum(n))
+coral_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "coral_reef", "n"]
+coral_percent <- coral_total/subhabitat_total
+rockyreef_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "rocky_reef", "n"]
+rockyreef_percent <- rockyreef_total/subhabitat_total
+kelp_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "kelp_forest", "n"]
+kelp_percent <- kelp_total/subhabitat_total
+
+#figure 1b
+fig_subhabitat <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, n), y = n)) +
+  geom_col(width = 0.8/8*8) +
+  labs(
+    x = "Habitat Subtype",
+    y = ""
+  ) +
+  my_theme +
+  scale_x_discrete(labels = c("coral_reef" = "Coral reef",
+                              "rocky_reef" = "Rocky reef",
+                              "na" = "Not specified",
+                              "kelp_forest" = "Kelp forest",
+                              "shallow_reef" = "Shallow reef",
+                              "seagrass" = "Seagrass",
+                              "deep_reef" = "Deep reef",
+                              "intertidal" = "Intertidal"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,130)
+```
+
+
+```{r assemblages}
+assemblage_all <- data %>% 
+  count(assemblage_type) %>% 
+  mutate(proportion = n /sum(n))
+
+unique_assemblages <- data %>% 
+  distinct(assemblage_type)
+
+#write_csv(unique_assemblages, "unique_assemblages.csv")
+
+lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
+
+assemblages_combined <- assemblage_all %>% 
+  left_join(lookup_table_assembl, by = "assemblage_type") %>% 
+  select(n, grouped_assemblage_highest) %>% 
+  group_by(grouped_assemblage_highest) %>% 
+  summarise(total = sum(n), .groups = "drop") %>% 
+  ungroup() %>% 
+  mutate(proportion = (total / sum(total)))
+
+#figure - first option
+fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, total), y = total)) +
+  geom_col(width = 0.8/8*7) +   #set up column chart
+  labs(
+    x = "Assemblage Type",
+    y = ""
+  ) +
+  my_theme +
+  scale_x_discrete(labels = c("fish" = "Fish",
+                              "na" = "Not specified",
+                              "coral" = "Coral",
+                              "benthic" = "Benthic",
+                              "invertebrates" = "Invertebrates",
+                              "macroalgae" = "Macroalgae"),
+                   drop = FALSE) +
+  coord_flip() +
+  ylim(0,119)
+```
+
+
+```{r combine column graphs}
+figure_2 <- (fig_habitat / fig_subhabitat / fig_assemblage) +
+  theme(axis.title.x = element_blank()) +
+  plot_annotation(caption = "Number of Occurrances")
+```
+
