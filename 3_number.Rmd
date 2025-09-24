@@ -1,0 +1,80 @@
+---
+title: "Make Figure 3"
+output: html_document
+date: "2025-09-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(forcats)
+```
+
+
+```{r mpa effects, message = FALSE}
+#figure 3a
+mpa_effect_counts <- data %>% 
+  count(mpa_effect) %>% #make dataset with counts data
+  mutate(proportion = n /sum(n)) %>% 
+  mutate(mpa_effect = fct_reorder(mpa_effect, n, .fun = mean, .desc = TRUE))
+
+#figure 3a
+fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n, fill = mpa_effect)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  labs(
+    x = "MPA Response Type",
+    y = "Number of Occurences",
+    fill = "MPA Effect"
+  ) +
+  scale_x_discrete(labels = c("no_effect" = "No effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)")) +
+  scale_fill_manual(values = mpa_colors,
+                    labels = c("No effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)")) +
+  coord_flip() +
+  my_theme
+
+fig3a
+```
+
+
+```{r climate effects, message = FALSE, fig.width=8, fig.height=6}
+#figure 3b data
+climate_counts_prelim <- data %>% 
+  count(climate_effect) %>% #preliminary counts of climate effect (without separating rows with multiple categories)
+  mutate(proportion = n /sum(n)) %>% 
+  mutate(climate_effect = fct_reorder(climate_effect, n, .fun = mean, .desc = TRUE))
+
+#figure 3b ggplot
+fig3b <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, n), y = n, fill = climate_effect)) +
+  geom_bar(stat = "identity", width = .75) +   #set up bar chart
+  labs(
+    x = "Ecological Impact of Climate Change",
+    y = "Number of Occurences",
+    fill = "Climate Impact",
+  ) +
+  my_theme +
+  scale_fill_manual(values = climate_colors,
+                    labels = c("Mortality", "Habitat formation", "Body size", "Movement/Range shift", "Disease/Parasitism", "Reproduction", "Phenology")) +
+  scale_x_discrete(labels = c("mortality" = "Mortality",
+                              "habitat_formation" = "Habitat formation", 
+                              "body_size" = "Body size", 
+                              "movement_range" = "Movement/Range shift",
+                              "disease_parasite" = "Disease/Parasitism", 
+                              "reproduction" = "Reproduction",
+                              "phenology" = "Phenology")) +
+  coord_flip()
+
+fig3b #view figure
+
+```
+
+
+```{r}
+figure_3 <- (fig3a / fig3b) +
+  theme(axis.title.x = element_blank())
+
+figure_3
+```
+

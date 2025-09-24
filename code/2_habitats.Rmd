@@ -12,7 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r habitat type}
 #figure 1a
 habitat_counts <- data %>% 
-  count(habitat_type) #make dataset with counts data
+  count(habitat_type) %>% #make dataset with counts data
+  add_row(habitat_type = "polar", n = 0)
 
 tropic_total <- habitat_counts[habitat_counts$habitat_type == "tropical", "n"]
 temperate_total <- habitat_counts[habitat_counts$habitat_type == "temperate", "n"]
@@ -30,12 +31,14 @@ fig_habitat <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), 
   my_theme +
   scale_x_discrete(labels = c("tropical" = "Tropical", 
                               "temperate" = "Temperate", 
-                              "na" = "Not specified"),
+                              "na" = "Not specified",
+                              "polar" = "Polar"),
                    drop = FALSE) +
   coord_flip() +
   ylim(0,130)
 
 ```
+
 
 ```{r habitat subtypes}
 #figure 1b
@@ -114,7 +117,6 @@ fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_a
 
 ```{r combine column graphs}
 figure_2 <- (fig_habitat / fig_subhabitat / fig_assemblage) +
-  theme(axis.title.x = element_blank()) +
-  plot_annotation(caption = "Number of Occurrances")
+  theme(axis.title.x = element_blank())
 ```
 

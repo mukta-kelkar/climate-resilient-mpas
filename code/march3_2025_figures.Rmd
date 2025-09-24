@@ -426,6 +426,7 @@ fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n
     x = "MPA Response Type",
     y = "Number of Occurences"
   ) +
+  my_theme +
   scale_x_discrete(labels = c("no_effect" = "No Effect",
                               "positive_ecosystem" = "Ecosystem (+)", 
                               "negative_ecosystem" = "Ecosystem (-)",
@@ -433,7 +434,6 @@ fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n
                               "negative_population" = "Population (-)",
                               "not_assessed" = "Not Assessed")) +
   scale_fill_manual(values = mpa_colors) +
-  my_theme +
   coord_flip()
 
 fig3a
