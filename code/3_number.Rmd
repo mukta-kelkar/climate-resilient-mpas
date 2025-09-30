@@ -22,7 +22,7 @@ fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
   labs(
     x = "MPA Response Type",
-    y = "Number of Occurences",
+    y = "",
     fill = "MPA Effect"
   ) +
   scale_x_discrete(labels = c("no_effect" = "No effect",
@@ -33,7 +33,8 @@ fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n
   scale_fill_manual(values = mpa_colors,
                     labels = c("No effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)")) +
   coord_flip() +
-  my_theme
+  my_theme +
+  ylim(0, 150)
 
 fig3a
 ```
@@ -72,9 +73,10 @@ fig3b #view figure
 
 
 ```{r}
-figure_3 <- (fig3a / fig3b) +
-  theme(axis.title.x = element_blank())
+figure_3 <- (fig3a / fig3b)
 
 figure_3
+
+
 ```
 

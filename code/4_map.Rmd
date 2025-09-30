@@ -90,4 +90,11 @@ map_mpa <- ggplot() +
 map_climate
 map_mpa
 ```
+```{r, fig.width = 20}
+#combine figures using patchwork packages
+figure_4 <- (map_mpa / map_climate)
+
+#print figure
+figure_4
+```
 

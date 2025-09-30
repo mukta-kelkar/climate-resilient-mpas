@@ -18,10 +18,21 @@ heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect,
   geom_tile() +
   labs(
     x = "Climate Impact",
-    y = "MPA Response",
+    y = "MPA Effect",
     fill = "Number of occurrences"
   ) +
-  #scale_y_discrete(labels = c("Ecosystem (+)", "Population", "Ecosystem (-)", "None")) +
+  scale_y_discrete(labels = c("positive_population" = "Population (+)", 
+                              "positive_ecosystem" = "Ecosystem (+)",
+                              "no_effect" = "No effect", 
+                              "negative_population" = "Population (-)",
+                              "negative_ecosystem" = "Ecosystem (-)")) +
+  scale_x_discrete(labels = c("body_size" = "Body Size",
+                                 "disease_parasite" = "Disease & Parasitism",
+                                 "habitat_formation" = "Habitat Formation",
+                                 "mortality" = "Mortality",
+                                 "movement_range" = "Movement & Range Shifts",
+                                 "phenology" = "Phenology",
+                                 "reproduction" = "Reproduction")) +
   scale_fill_gradient2(low = "grey",
                       high = "black") +
   theme_classic(base_size = 14) +

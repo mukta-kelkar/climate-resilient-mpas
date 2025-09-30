@@ -1,0 +1,49 @@
+---
+title: "Figure 6"
+output: html_document
+date: "2025-09-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+mpa_effects_by_habitat <- data %>% 
+  select(habitat_type, habitat_subtype, climate_effect, mpa_effect) %>% 
+  #remove NAs
+  filter(!mpa_effect == "not_assessed") %>% 
+  filter(!habitat_subtype == "na") %>% 
+  filter(!habitat_type == "na") %>% 
+  #count by category
+  group_by(habitat_type, habitat_subtype) %>% 
+  count(mpa_effect) %>% 
+  mutate(proportion = n /sum(n))
+
+figure_6 <- ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, x = habitat_subtype)) + 
+  facet_wrap(habitat_type~.) +
+  geom_bar(position = 'stack', stat = 'identity') + 
+  theme_classic() +
+  labs(
+    fill = "MPA Effect",
+    y = "Number of Occurrences",
+    x = "Habitat Type"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  scale_fill_manual(values = mpa_colors,
+                    labels = c("no_effect" = "No effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)")) +
+  scale_x_discrete(labels= c("coral_reef" = "Coral reef",
+                             "deep_reef" = "Deep reef",
+                             "intertidal" = "Intertidal",
+                             "kelp_forest" = "Kelp forest",
+                             "rocky_reef" = "Rocky reef",
+                             "seagrass" = "Seagrass",
+                             "shallow_reef" = "Shallow Reef"))
+
+figure_6
+```
+
