@@ -9,23 +9,101 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r habitat type}
-#figure 1a
-habitat_counts <- data %>% 
+```{r create count data}
+#climatic zone counts
+climatic_zone <- data %>% 
   count(habitat_type) %>% #make dataset with counts data
-  add_row(habitat_type = "polar", n = 0)
+  add_row(habitat_type = "polar", n = 0) %>%  #add polar
+  # Add category
+  mutate(catg="Climatic Zone") %>% 
+  # Rename
+  rename(habitat=habitat_type)
 
-tropic_total <- habitat_counts[habitat_counts$habitat_type == "tropical", "n"]
-temperate_total <- habitat_counts[habitat_counts$habitat_type == "temperate", "n"]
+# Habitat counts
+habitat_counts <- data %>% 
+  count(habitat_subtype) %>% 
+  # Add category
+  mutate(catg="Habitat") %>% 
+  # Rename
+  rename(habitat=habitat_subtype)
+
+#count assemblages
+assemblage_all <- data %>% 
+  count(assemblage_type) %>% 
+  mutate(proportion = n /sum(n))
+
+#ID unique assemblages
+unique_assemblages <- data %>% 
+  distinct(assemblage_type)
+
+#create lookup table
+#write_csv(unique_assemblages, "unique_assemblages.csv")
+
+#read in assemblage lookup table
+lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
+
+#combine assemblage data with lookup table, make counts
+assemblage_counts <- assemblage_all %>% 
+  left_join(lookup_table_assembl, by = "assemblage_type") %>% #join look up table
+  select(n, grouped_assemblage_highest) %>% #select highest grouping
+  group_by(grouped_assemblage_highest) %>% 
+  summarise(n = sum(n), .groups = "drop") %>% 
+  ungroup() %>% 
+  mutate(catg = "Assemblage") %>% 
+  rename(habitat = grouped_assemblage_highest)
+```
+
+
+``` {r calculate percentages for paper}
+#climatic zone
+tropic_total <- climatic_zone[climatic_zone$habitat == "tropical", "n"]
+temperate_total <- climatic_zone[climatic_zone$habitat == "temperate", "n"]
+climatic_total <- climatic_zone %>% summarize(total = sum(n))
+tropic_percent <- tropic_total/climatic_total
+temperate_percent <- temperate_total/climatic_total
+
+#habitats
 habitat_total <- habitat_counts %>% summarize(total = sum(n))
-tropic_percent <- tropic_total/habitat_total
-temperate_percent <- temperate_total/habitat_total
+coral_total <- habitat_counts[habitat_counts$habitat == "coral_reef", "n"]
+coral_percent <- coral_total/habitat_total
+rockyreef_total <- habitat_counts[habitat_counts$habitat == "rocky_reef", "n"]
+rockyreef_percent <- rockyreef_total/habitat_total
+kelp_total <- habitat_counts[habitat_counts$habitat == "kelp_forest", "n"]
+kelp_percent <- kelp_total/habitat_total
+```
 
+
+```{r make combined figure}
+# Merge counts
+counts <- bind_rows(climatic_zone, habitat_counts, assemblage_counts) %>% 
+  # Format category
+  mutate(catg=factor(catg, levels=c("Climatic Zone", "Habitat", "Assemblage"))) %>% 
+  # Format habitats
+  mutate(habitat=gsub("_", " ", habitat) %>% stringr::str_to_sentence(),
+         habitat=recode(habitat, "Na"="Not specified"))
+
+figure2 <- ggplot(counts, aes(x=n, 
+                        y=tidytext::reorder_within(habitat, desc(n), catg))) +
+  facet_grid(catg~., space="free_y", scales="free_y") +
+  geom_bar(stat="identity") +
+  # Labels
+  labs(x="Number of occurences", y="") +
+  # Scales
+  tidytext::scale_y_reordered() +
+  # Theme
+  theme_classic() +
+  theme(strip.background = element_rect(colour=NA, fill=NA))
+
+figure2
+```
+
+
+```{r make figures}
 #figure 1a
 fig_habitat <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), y = n)) +
   geom_col(width = 0.8/8*3) +
   labs(
-    x = "Habitat type",
+    x = "Climatic Zone",
     y = ""
   ) +
   my_theme +
@@ -37,21 +115,10 @@ fig_habitat <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), 
   coord_flip() +
   ylim(0,130)
 
-```
 
-
-```{r habitat subtypes}
 #figure 1b
 subhabitat_counts <- data %>% 
   count(habitat_subtype) #make dataset with counts data
-
-subhabitat_total <- subhabitat_counts %>% summarize(total = sum(n))
-coral_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "coral_reef", "n"]
-coral_percent <- coral_total/subhabitat_total
-rockyreef_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "rocky_reef", "n"]
-rockyreef_percent <- rockyreef_total/subhabitat_total
-kelp_total <- subhabitat_counts[subhabitat_counts$habitat_subtype == "kelp_forest", "n"]
-kelp_percent <- kelp_total/subhabitat_total
 
 #figure 1b
 fig_subhabitat <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, n), y = n)) +
@@ -72,28 +139,6 @@ fig_subhabitat <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subt
                    drop = FALSE) +
   coord_flip() +
   ylim(0,130)
-```
-
-
-```{r assemblages}
-assemblage_all <- data %>% 
-  count(assemblage_type) %>% 
-  mutate(proportion = n /sum(n))
-
-unique_assemblages <- data %>% 
-  distinct(assemblage_type)
-
-#write_csv(unique_assemblages, "unique_assemblages.csv")
-
-lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
-
-assemblages_combined <- assemblage_all %>% 
-  left_join(lookup_table_assembl, by = "assemblage_type") %>% 
-  select(n, grouped_assemblage_highest) %>% 
-  group_by(grouped_assemblage_highest) %>% 
-  summarise(total = sum(n), .groups = "drop") %>% 
-  ungroup() %>% 
-  mutate(proportion = (total / sum(total)))
 
 #figure - first option
 fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, total), y = total)) +
@@ -112,10 +157,7 @@ fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_a
                    drop = FALSE) +
   coord_flip() +
   ylim(0,119)
-```
 
-
-```{r combine column graphs}
 figure_2 <- (fig_habitat / fig_subhabitat / fig_assemblage) +
   theme(axis.title.x = element_blank())
 ```
