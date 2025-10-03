@@ -83,7 +83,7 @@ counts <- bind_rows(climatic_zone, habitat_counts, assemblage_counts) %>%
          habitat=recode(habitat, "Na"="Not specified"))
 
 figure2 <- ggplot(counts, aes(x=n, 
-                        y=tidytext::reorder_within(habitat, desc(n), catg))) +
+                        y=tidytext::reorder_within(habitat, n, catg))) +
   facet_grid(catg~., space="free_y", scales="free_y") +
   geom_bar(stat="identity") +
   # Labels

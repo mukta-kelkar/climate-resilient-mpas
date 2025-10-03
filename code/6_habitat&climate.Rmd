@@ -35,7 +35,8 @@ figure_6 <- ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, 
                               "positive_ecosystem" = "Ecosystem (+)", 
                               "negative_ecosystem" = "Ecosystem (-)",
                               "positive_population" = "Population (+)", 
-                              "negative_population" = "Population (-)")) +
+                              "negative_population" = "Population (-)"),
+                    breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population")) +
   scale_x_discrete(labels= c("coral_reef" = "Coral reef",
                              "deep_reef" = "Deep reef",
                              "intertidal" = "Intertidal",

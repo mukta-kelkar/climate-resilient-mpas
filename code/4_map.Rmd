@@ -19,8 +19,8 @@ map_latlong <- data %>%
 
 #horizontal line labels
 lines_df <- data.frame(
-  y = c(30, -30, 60, -60, 0),
-  label = c("Tropical", "Tropical", "Temperate", "Temperate", "Equator")
+  y = c(23.4, -23.4, -40, 40, 60, -60),
+  label = c("Tropical", "Tropical", "Subtropical", "Subtropical", "Temperate", "Temperate")
 )
 
 world_map <- map_data("world")
@@ -38,16 +38,16 @@ map_climate <- ggplot() +
   labs(title = "Geographic distribution of climate impact",
        color = "Climate impact") +
   scale_color_manual(values = climate_colors,
-                     labels = c("body_size" = "Body Size",
-                                 "disease_parasite" = "Disease & Parasitism",
-                                 "habitat_formation" = "Habitat Formation",
-                                 "mortality" = "Mortality",
-                                 "movement_range" = "Movement & Range Shifts",
-                                 "phenology" = "Phenology",
-                                 "reproduction" = "Reproduction")) +
-  ylim(-65, 65) +
-  geom_hline(yintercept = c(30, -30, 60, -60), linetype = "dashed", color = "grey30") +
-  geom_hline(yintercept = c(0), linetype = "solid", color = "grey30") +
+                     labels = c("mortality" = "Mortality",
+                                "habitat_formation" = "Habitat Formation",
+                                "body_size" = "Body Size",
+                                "movement_range" = "Movement & Range Shifts",
+                                "disease_parasite" = "Disease & Parasitism",
+                                "phenology" = "Phenology",
+                                "reproduction" = "Reproduction"),
+                     breaks = c("mortality", "habitat_formation", "body_size", "movement_range", "disease_parasite", "reproduction", "phenology")) +
+  ylim(-65, 90) +
+  geom_hline(yintercept = c(23.4, -23.4, 40, -40, 60, -60), linetype = "dashed", color = "grey30") +
   geom_text(data = lines_df,
     aes(x = -155, y = y, label = label),
     hjust = 1,          # right-align the text to the edge
@@ -74,22 +74,25 @@ map_mpa <- ggplot() +
                                 "negative_population" = "Population (-)",
                                 "no_effect" = "No effect",
                                 "positive_ecosystem" = "Ecosystem (+)",
-                                "positive_population" = "Population (+)")) +
-  ylim(-65, 65) +
-  geom_hline(yintercept = c(30, -30, 60, -60), linetype = "dashed", color = "grey30") +
-  geom_hline(yintercept = c(0), linetype = "solid", color = "grey30") +
-  geom_text(data = lines_df,
-    aes(x = -155, y = y, label = label),
-    hjust = 1,          # right-align the text to the edge
-    vjust = -0.3,       # small vertical adjustment
-    color = "grey30",
-    size = 3
-  )
+                                "positive_population" = "Population (+)"),
+                     breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population")) +
+  ylim(-65, 90) #+
+  # geom_hline(yintercept = c(30, -30, 60, -60), linetype = "dashed", color = "grey30") +
+  # geom_hline(yintercept = c(0), linetype = "solid", color = "grey30") +
+  # geom_text(data = lines_df,
+  #   aes(x = -155, y = y, label = label),
+  #   hjust = 1,          # right-align the text to the edge
+  #   vjust = -0.3,       # small vertical adjustment
+  #   color = "grey30",
+  #   size = 3
+  # )
 
 
 map_climate
 map_mpa
 ```
+
+
 ```{r, fig.width = 20}
 #combine figures using patchwork packages
 figure_4 <- (map_mpa / map_climate)
