@@ -1,0 +1,57 @@
+---
+title: "Supplemental Figures"
+output: html_document
+date: "2025-09-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+climate_effects_by_zone <- data %>% 
+  select(climatic_zone, habitat_type, climate_effect) %>% 
+  #remove NAs
+  filter(!climatic_zone == "na") %>% 
+  filter(!habitat_type == "na") %>% 
+  #count by category
+  group_by(climatic_zone, habitat_type) %>% 
+  count(climate_effect) %>% 
+  mutate(proportion = n /sum(n)) %>% 
+  #format habitat type names
+  mutate(habitat_type=gsub("_", " ", habitat_type) %>% stringr::str_to_sentence(),
+         habitat_type=recode(habitat_type, "Na"="Not specified")) %>% 
+  #format climatic zone names
+  mutate(climatic_zone = str_to_sentence(climatic_zone))
+
+#reorder climatic_zone factors to tropical, subtropical, temperate
+climate_effects_by_zone$climatic_zone <- factor(climate_effects_by_zone$climatic_zone, levels = c("Tropical", "Subtropical", "Temperate"))
+
+figure_s1 <- ggplot(data = climate_effects_by_zone, aes(fill = climate_effect, y = n, x = habitat_type)) + 
+  facet_wrap(climatic_zone~.) +
+  geom_bar(position = 'stack', stat = 'identity') + 
+  theme_classic() +
+  labs(
+    fill = "Climate Impact",
+    y = "Number of Occurrences",
+    x = "Habitat Type"
+  ) +
+  my_theme() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  scale_fill_manual(values = climate_colors,
+                    labels = c("mortality" = "Mortality",
+                              "habitat_formation" = "Habitat formation", 
+                              "body_size" = "Body size", 
+                              "movement_range" = "Movement and range shift",
+                              "disease_parasite" = "Disease and parasitism", 
+                              "reproduction" = "Reproduction",
+                              "phenology" = "Phenology"),
+                    breaks = c("mortality", "habitat_formation", "body_size", "movement_range", "disease_parasite", "reproduction", "phenology")) +
+  theme(strip.background = element_rect(colour=NA, fill=NA),
+        strip.text = element_text(
+          size = 14
+        ))
+
+figure_s1
+```
+

@@ -373,8 +373,8 @@ map_mpa <- ggplot() +
   theme_minimal() +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  labs(title = "Geographic Distribution of MPA Effect",
-       color = "MPA Response Type",
+  labs(title = "Geographic distribution of MPA effect",
+       color = "MPA effect type",
        caption = "Figure ") +
   scale_color_manual(values = mpa_colors)
 

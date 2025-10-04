@@ -21,7 +21,7 @@ mpa_effect_counts <- data %>%
 fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n, fill = mpa_effect)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
   labs(
-    x = "MPA Response Type",
+    x = "MPA effect",
     y = "",
     fill = "MPA Effect"
   ) +
@@ -33,7 +33,7 @@ fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n
   scale_fill_manual(values = mpa_colors,
                     labels = c("No effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)")) +
   coord_flip() +
-  my_theme +
+  my_theme() +
   ylim(0, 150)
 
 fig3a
@@ -55,14 +55,14 @@ fig3b <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, n
     y = "Number of Occurences",
     fill = "Climate Impact",
   ) +
-  my_theme +
+  my_theme() +
   scale_fill_manual(values = climate_colors,
-                    labels = c("Mortality", "Habitat formation", "Body size", "Movement/Range shift", "Disease/Parasitism", "Reproduction", "Phenology")) +
+                    labels = c("Mortality", "Habitat formation", "Body size", "Movement and range shift", "Disease and parasitism", "Reproduction", "Phenology")) +
   scale_x_discrete(labels = c("mortality" = "Mortality",
                               "habitat_formation" = "Habitat formation", 
                               "body_size" = "Body size", 
-                              "movement_range" = "Movement/Range shift",
-                              "disease_parasite" = "Disease/Parasitism", 
+                              "movement_range" = "Movement and range shift",
+                              "disease_parasite" = "Disease and parasitism", 
                               "reproduction" = "Reproduction",
                               "phenology" = "Phenology")) +
   coord_flip()
@@ -76,7 +76,5 @@ fig3b #view figure
 figure_3 <- (fig3a / fig3b)
 
 figure_3
-
-
 ```
 

@@ -12,20 +12,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r create count data}
 #climatic zone counts
 climatic_zone <- data %>% 
-  count(habitat_type) %>% #make dataset with counts data
-  add_row(habitat_type = "polar", n = 0) %>%  #add polar
+  count(climatic_zone) %>% #make dataset with counts data
+  add_row(climatic_zone = "polar", n = 0) %>%  #add polar
   # Add category
   mutate(catg="Climatic Zone") %>% 
   # Rename
-  rename(habitat=habitat_type)
+  rename(habitat=climatic_zone) #change name of climatic_zone column to habitat so all three dataset can be combined
 
 # Habitat counts
 habitat_counts <- data %>% 
-  count(habitat_subtype) %>% 
+  count(habitat_type) %>% 
   # Add category
   mutate(catg="Habitat") %>% 
   # Rename
-  rename(habitat=habitat_subtype)
+  rename(habitat=habitat_type)
 
 #count assemblages
 assemblage_all <- data %>% 
@@ -38,6 +38,8 @@ unique_assemblages <- data %>%
 
 #create lookup table
 #write_csv(unique_assemblages, "unique_assemblages.csv")
+
+#lookup table was then manually editing before being read back in
 
 #read in assemblage lookup table
 lookup_table_assembl <- read.csv(here("unique_assemblages.csv"))
@@ -57,9 +59,11 @@ assemblage_counts <- assemblage_all %>%
 ``` {r calculate percentages for paper}
 #climatic zone
 tropic_total <- climatic_zone[climatic_zone$habitat == "tropical", "n"]
+subtropic_total <- climatic_zone[climatic_zone$habitat == "subtropical", "n"]
 temperate_total <- climatic_zone[climatic_zone$habitat == "temperate", "n"]
 climatic_total <- climatic_zone %>% summarize(total = sum(n))
 tropic_percent <- tropic_total/climatic_total
+subtropic_percent <- subtropic_total/climatic_total
 temperate_percent <- temperate_total/climatic_total
 
 #habitats
@@ -91,8 +95,13 @@ figure2 <- ggplot(counts, aes(x=n,
   # Scales
   tidytext::scale_y_reordered() +
   # Theme
-  theme_classic() +
-  theme(strip.background = element_rect(colour=NA, fill=NA))
+  #theme_classic() +
+  my_theme() +
+  theme(strip.background = element_rect(colour=NA, fill=NA),
+        strip.text = element_text(
+          size = 14
+        ))
+  
 
 figure2
 ```

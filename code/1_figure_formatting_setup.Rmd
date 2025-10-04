@@ -26,14 +26,14 @@ library(patchwork)
 #read in lit review data
 data <- read.csv(here("data.csv"), na.strings = c("", "NA")) %>% #read in data with empty cells as NA
   clean_names() %>%
-  select(-magnitude) %>% 
-  select(-mechanism) %>% 
-  mutate(habitat_type = ifelse(habitat_type == "subtropical", "tropical", habitat_type))
+  select(-c(magnitude, mechanism)) %>% #remove notes columns
+  select(-habitat_type) %>%  #remove habitat type column
+  rename(habitat_type = habitat_subtype) #rename habitat type as habitat subtype
   #na.omit() #omit NAs
 
 data_unique <- data %>% 
-  select(citation, topic, habitat_type, habitat_subtype, geographic_region) %>% #select variable that are constant within each case study
-  distinct(citation, habitat_type, geographic_region, .keep_all = TRUE)
+  select(citation, topic, climatic_zone, habitat_type, geographic_region) %>% #select variable that are constant within each case study
+  distinct(citation, climatic_zone, geographic_region, .keep_all = TRUE)
 
 #read in MEOW TNC Shapefile
 meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
@@ -44,9 +44,49 @@ meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>%
 #                family = "worksans")
 
 #standard theme for all graphs
-my_theme <- theme_classic() +
-  theme(base_size = 14)
-        #axis.text.x = element_text(angle = 45, hjust = 1))
+my_theme <- function() {
+  theme_classic(base_family = "Arial") +   # base font family
+    theme(
+      # Titles
+      plot.title = element_text(
+        family = "Arial",  # font type
+        face = "bold", 
+        color = "black",       # title color
+        size = 18,             # title size
+        hjust = 0.5            # center title
+      ),
+      
+      # Axis titles
+      axis.title = element_text(
+        family = "Arial",
+        face = "bold",
+        color = "gray20",
+        size = 14
+      ),
+      
+      # Axis text (tick labels)
+      axis.text = element_text(
+        family = "Arial",
+        color = "gray30",
+        size = 12
+      ),
+      
+      # Legend title
+      legend.title = element_text(
+        family = "Arial",
+        face = "bold",
+        color = "black",
+        size = 13
+      ),
+      
+      # Legend text
+      legend.text = element_text(
+        family = "Arial",
+        color = "gray30",
+        size = 12
+      )
+    )
+}
 
 #source for standard color palettes: https://www.simplifiedsciencepublishing.com/resources/best-color-palettes-for-scientific-figures-and-data-visualizations
 #for mpa effect, use six color combination from "Divergent"
