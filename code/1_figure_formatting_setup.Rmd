@@ -35,10 +35,6 @@ data_unique <- data %>%
   select(citation, topic, climatic_zone, habitat_type, geographic_region) %>% #select variable that are constant within each case study
   distinct(citation, climatic_zone, geographic_region, .keep_all = TRUE)
 
-#read in MEOW TNC Shapefile
-meow <- read_sf(here("MEOW-TNC", "meow_ecos.shp")) %>% 
-  clean_names()
-
 #add google fonts to working memory for figures
 #font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
 #                family = "worksans")
