@@ -16,3 +16,8 @@ code: scrips for processing data and creating figures
 
 fig: folder includes all final figures
 
+data:
+- data.csv: main dataset for manuscript
+- unique_assemblages_final.csv: look up table used to collapse assemblages into clear categories
+
+
