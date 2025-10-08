@@ -32,9 +32,9 @@ figure_s1 <- ggplot(data = climate_effects_by_zone, aes(fill = climate_effect, y
   geom_bar(position = 'stack', stat = 'identity') + 
   theme_classic() +
   labs(
-    fill = "Climate Impact",
-    y = "Number of Occurrences",
-    x = "Habitat Type"
+    fill = "Climate impact",
+    y = "Number of occurrences",
+    x = "Habitat type"
   ) +
   my_theme() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
@@ -53,5 +53,7 @@ figure_s1 <- ggplot(data = climate_effects_by_zone, aes(fill = climate_effect, y
         ))
 
 figure_s1
+
+ggsave("figure_s1.png", plot = figure_s1, width = 8, height = 6, dpi = 300)
 ```
 

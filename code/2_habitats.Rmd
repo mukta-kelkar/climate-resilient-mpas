@@ -104,6 +104,8 @@ figure2 <- ggplot(counts, aes(x=n,
   
 
 figure2
+
+ggsave("figure2.png", plot = figure2, width = 8, height = 6, dpi = 300)
 ```
 
 
