@@ -13,5 +13,6 @@ code: scrips for processing data and creating figures
 - 5_heatmap: creates figure 5
 - 6_habitat&climate: creates figure 6
 - 7_supplemental: creates supplemental figure
+
 fig: folder includes all final figures
 
