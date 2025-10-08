@@ -54,6 +54,6 @@ figure_s1 <- ggplot(data = climate_effects_by_zone, aes(fill = climate_effect, y
 
 figure_s1
 
-ggsave("figure_s1.png", plot = figure_s1, width = 8, height = 6, dpi = 300)
+ggsave(here("fig","figure_s1.png"), plot = figure_s1, width = 8, height = 6, dpi = 300)
 ```
 

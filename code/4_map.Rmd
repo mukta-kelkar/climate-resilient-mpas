@@ -102,5 +102,7 @@ figure_4 <- (map_mpa / map_climate)
 
 #print figure
 figure_4
+
+ggsave(here("fig", "figure4.png"), plot = figure_4, width = 10, height = 8, dpi = 300)
 ```
 
