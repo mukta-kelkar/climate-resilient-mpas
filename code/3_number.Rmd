@@ -57,7 +57,13 @@ fig3b <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, n
   ) +
   my_theme() +
   scale_fill_manual(values = climate_colors,
-                    labels = c("Mortality", "Habitat formation", "Body size", "Movement and range shift", "Disease and parasitism", "Reproduction", "Phenology")) +
+                    labels = c("mortality" = "Mortality",
+                              "habitat_formation" = "Habitat formation", 
+                              "body_size" = "Body size", 
+                              "movement_range" = "Movement and range shift",
+                              "disease_parasite" = "Disease and parasitism", 
+                              "reproduction" = "Reproduction",
+                              "phenology" = "Phenology")) +
   scale_x_discrete(labels = c("mortality" = "Mortality",
                               "habitat_formation" = "Habitat formation", 
                               "body_size" = "Body size", 
