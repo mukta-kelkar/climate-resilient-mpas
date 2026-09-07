@@ -9,10 +9,20 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(viridis)
+
 eco_effects <- data %>% 
   select(mpa_effect, climate_effect) %>% 
   group_by(mpa_effect, climate_effect) %>% 
-  count(mpa_effect, climate_effect, name = "count")
+  count(mpa_effect, climate_effect, name = "count") %>% 
+  #normalize by climate impact/column
+  group_by(climate_effect) %>% 
+  mutate(proportion = count/(sum(count))) %>% 
+  ungroup() %>% 
+  #normalize by mpa effect
+  group_by(mpa_effect) %>% 
+  mutate(proportion_row = count/(sum(count))) %>% 
+  ungroup()
 
 heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect, fill = count)) +
   geom_tile() +
@@ -23,7 +33,7 @@ heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect,
   ) +
   scale_y_discrete(labels = c("positive_population" = "Population (+)", 
                               "positive_ecosystem" = "Ecosystem (+)",
-                              "no_effect" = "No effect", 
+                              "no_effect" = "No detected effect", 
                               "negative_population" = "Population (-)",
                               "negative_ecosystem" = "Ecosystem (-)"),
                    limits = c("negative_population", "negative_ecosystem", "positive_population", "positive_ecosystem", "no_effect")) +
@@ -35,8 +45,9 @@ heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect,
                                  "phenology" = "Phenology",
                                  "reproduction" = "Reproduction"),
                    limits = c("mortality", "habitat_formation", "body_size", "movement_range", "disease_parasite", "reproduction", "phenology")) +
-  scale_fill_gradient2(low = "grey",
-                      high = "black") +
+  # scale_fill_gradient2(low = "grey",
+  #                    high = "black") +
+  scale_fill_viridis(option = "viridis") +
   my_theme() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
@@ -45,6 +56,6 @@ heatmap_v2 <- ggplot(data = eco_effects, aes(x = climate_effect, y = mpa_effect,
 
 heatmap_v2
 
-ggsave(here("fig", "figure5.png"), plot = heatmap_v2, width = 8, height = 6, dpi = 300)
+ggsave(here("fig", "figure5.png"), plot = heatmap_v2, width = 8, height = 5, dpi = 300)
 ```
 

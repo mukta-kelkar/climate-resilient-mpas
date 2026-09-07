@@ -21,17 +21,17 @@ mpa_effect_counts <- data %>%
 fig3a <- ggplot(data = mpa_effect_counts, aes (x = reorder(mpa_effect, n), y = n, fill = mpa_effect)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
   labs(
-    x = "MPA effect",
-    y = "",
+    x = "",
+    y = "Number of occurences",
     fill = "MPA effect"
   ) +
-  scale_x_discrete(labels = c("no_effect" = "No effect",
+  scale_x_discrete(labels = c("no_effect" = "No detected effect",
                               "positive_ecosystem" = "Ecosystem (+)", 
                               "negative_ecosystem" = "Ecosystem (-)",
                               "positive_population" = "Population (+)", 
                               "negative_population" = "Population (-)")) +
   scale_fill_manual(values = mpa_colors,
-                    labels = c("No effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)")) +
+                    labels = c("No detected effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)")) +
   coord_flip() +
   my_theme() +
   ylim(0, 150)
@@ -51,7 +51,7 @@ climate_counts_prelim <- data %>%
 fig3b <- ggplot(data = climate_counts_prelim, aes (x = reorder(climate_effect, n), y = n, fill = climate_effect)) +
   geom_bar(stat = "identity", width = .75) +   #set up bar chart
   labs(
-    x = "Ecological impact of climate change",
+    x = "",
     y = "Number of occurences",
     fill = "Climate impact",
   ) +
@@ -79,7 +79,9 @@ fig3b #view figure
 
 
 ```{r}
-figure_3 <- (fig3a / fig3b)
+figure_3<- fig3a + fig3b + 
+  plot_layout(ncol = 1) +
+  plot_annotation(tag_levels = list(c("(a)", "(b)")))
 
 figure_3
 

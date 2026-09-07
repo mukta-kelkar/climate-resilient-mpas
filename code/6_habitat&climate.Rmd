@@ -23,7 +23,12 @@ mpa_effects_by_habitat <- data %>%
    mutate(habitat_type=gsub("_", " ", habitat_type) %>% stringr::str_to_sentence(),
           habitat_type=recode(habitat_type, "Na"="Not specified")) %>% 
   #format climatic zone names
-  mutate(climatic_zone = str_to_sentence(climatic_zone))
+  mutate(climatic_zone = str_to_sentence(climatic_zone)) #%>% 
+  # mutate(climatic_zone = case_when(
+  #   climatic_zone == "Tropical" ~ "(a) Tropical",
+  #   climatic_zone == "Subtropical" ~ "(b) Subtropical",
+  #   climatic_zone == "Temperate" ~ "(c) Temperate"
+  # ))
 
 #reorder climatic_zone factors to tropical, subtropical, temperate
 mpa_effects_by_habitat$climatic_zone <- factor(mpa_effects_by_habitat$climatic_zone, levels = c("Tropical", "Subtropical", "Temperate"))
@@ -77,7 +82,7 @@ figure_6 <- ggplot(data = mpa_effects_by_habitat, aes(fill = mpa_effect, y = n, 
   my_theme() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
   scale_fill_manual(values = mpa_colors,
-                    labels = c("no_effect" = "No effect",
+                    labels = c("no_effect" = "No detected effect",
                               "positive_ecosystem" = "Ecosystem (+)", 
                               "negative_ecosystem" = "Ecosystem (-)",
                               "positive_population" = "Population (+)", 

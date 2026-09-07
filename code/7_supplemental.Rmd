@@ -22,7 +22,12 @@ climate_effects_by_zone <- data %>%
   mutate(habitat_type=gsub("_", " ", habitat_type) %>% stringr::str_to_sentence(),
          habitat_type=recode(habitat_type, "Na"="Not specified")) %>% 
   #format climatic zone names
-  mutate(climatic_zone = str_to_sentence(climatic_zone))
+  mutate(climatic_zone = str_to_sentence(climatic_zone)) #%>% 
+  #   mutate(climatic_zone = case_when(
+  #   climatic_zone == "Tropical" ~ "(a) Tropical",
+  #   climatic_zone == "Subtropical" ~ "(b) Subtropical",
+  #   climatic_zone == "Temperate" ~ "(c) Temperate"
+  # ))
 
 #reorder climatic_zone factors to tropical, subtropical, temperate
 climate_effects_by_zone$climatic_zone <- factor(climate_effects_by_zone$climatic_zone, levels = c("Tropical", "Subtropical", "Temperate"))

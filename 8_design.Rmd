@@ -1,0 +1,77 @@
+---
+title: "MPA Design"
+output: html_document
+date: "2026-08-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rstatix)
+
+mpa_design <- data %>% 
+  select(climate_effect, mpa_effect, mpa_design) %>% 
+  filter(!mpa_design == "global") #drop global occurrences from this analysis
+
+#create contingency table
+c_tbl <- mpa_design %>% 
+  count(mpa_design, mpa_effect) %>% 
+  pivot_wider(names_from = mpa_effect, values_from = n, values_fill = 0) %>% 
+  column_to_rownames("mpa_design") %>% 
+  as.matrix()
+
+#create contingency table
+tbl <- mpa_design %>% 
+  count(mpa_effect, mpa_design) %>% 
+  pivot_wider(names_from = mpa_design, values_from = n, values_fill = 0) %>% 
+  column_to_rownames("mpa_effect") %>% 
+  as.matrix()
+
+chisq_result <- rstatix::chisq_test(c_tbl)
+chisq_result2 <- chisq.test(tbl)
+
+fisher_result <- rstatix::fisher_test(tbl)
+pairs <- t(tbl) %>% pairwise_fisher_test()
+std_resid <- chisq_result2$stdres
+
+
+#print plot by proportion
+figure_7 <- ggplot(data = mpa_design, aes(x = mpa_design, fill = mpa_effect)) +
+  geom_bar(position = "fill") + #plot proportions, not counts
+  labs(
+    x = NULL,
+    y = "Proportion of MPA effects per design category",
+    fill = "MPA effect"
+  ) +
+  my_theme() +
+  scale_fill_manual(values = mpa_colors,
+                    labels = c("No detected effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)"))
+
+ggsave(here("fig", "figure7.png"), plot = figure_7, width = 8, height = 6, dpi = 300)
+
+```
+
+```{r}
+ggplot(data = mpa_design, aes(x = mpa_design_binary, fill = climate_effect)) +
+  geom_bar() +
+  my_theme() +
+  scale_fill_manual(values = climate_colors,
+                    labels = c("mortality" = "Mortality",
+                              "habitat_formation" = "Habitat formation", 
+                              "body_size" = "Body size", 
+                              "movement_range" = "Movement and range shift",
+                              "disease_parasite" = "Disease and parasitism", 
+                              "reproduction" = "Reproduction",
+                              "phenology" = "Phenology")) +
+  scale_x_discrete(labels = c("mortality" = "Mortality",
+                              "habitat_formation" = "Habitat formation", 
+                              "body_size" = "Body size", 
+                              "movement_range" = "Movement and range shift",
+                              "disease_parasite" = "Disease and parasitism", 
+                              "reproduction" = "Reproduction",
+                              "phenology" = "Phenology"))
+
+```
+
