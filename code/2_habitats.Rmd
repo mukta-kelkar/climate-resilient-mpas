@@ -159,7 +159,12 @@ figure2 <- ggplot(counts, aes(x=n,
           size = 14),
         strip.placement = "outside") +
   scale_fill_manual(values = mpa_colors,
-                    labels = c("No detected effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)"))
+                    labels = c("no_effect" = "No detected effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)"),
+                    breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population"))
 
 figure2
 

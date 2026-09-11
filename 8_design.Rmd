@@ -8,70 +8,179 @@ date: "2026-08-30"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r run fisher exact test and make figure 7a}
 library(rstatix)
+
+data_design <- data %>% 
+  filter(!mpa_design == "global")
 
 mpa_design <- data %>% 
   select(climate_effect, mpa_effect, mpa_design) %>% 
   filter(!mpa_design == "global") #drop global occurrences from this analysis
 
-#create contingency table
-c_tbl <- mpa_design %>% 
-  count(mpa_design, mpa_effect) %>% 
-  pivot_wider(names_from = mpa_effect, values_from = n, values_fill = 0) %>% 
-  column_to_rownames("mpa_design") %>% 
-  as.matrix()
+tbl <- table(data_design$mpa_design, data_design$mpa_effect) #this is the same as c_tbl
+result_chi <- chisq.test(tbl)
+result_fisher <- fisher_test(tbl)
 
-#create contingency table
-tbl <- mpa_design %>% 
-  count(mpa_effect, mpa_design) %>% 
-  pivot_wider(names_from = mpa_design, values_from = n, values_fill = 0) %>% 
-  column_to_rownames("mpa_effect") %>% 
-  as.matrix()
-
-chisq_result <- rstatix::chisq_test(c_tbl)
-chisq_result2 <- chisq.test(tbl)
-
-fisher_result <- rstatix::fisher_test(tbl)
-pairs <- t(tbl) %>% pairwise_fisher_test()
-std_resid <- chisq_result2$stdres
-
+result_fisher
 
 #print plot by proportion
-figure_7 <- ggplot(data = mpa_design, aes(x = mpa_design, fill = mpa_effect)) +
+figure_7a <- ggplot(data = mpa_design, aes(x = mpa_design, fill = mpa_effect)) +
   geom_bar(position = "fill") + #plot proportions, not counts
   labs(
     x = NULL,
-    y = "Proportion of MPA effects per design category",
+    y = "Proportion of occurrences",
     fill = "MPA effect"
   ) +
   my_theme() +
   scale_fill_manual(values = mpa_colors,
-                    labels = c("No detected effect", "Ecosystem (+)", "Population (+)", "Ecosystem (-)", "Population (-)"))
+                    labels = c("no_effect" = "No detected effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)"),
+                    breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population"))
 
-ggsave(here("fig", "figure7.png"), plot = figure_7, width = 8, height = 6, dpi = 300)
-
+figure_7a
 ```
 
-```{r}
-ggplot(data = mpa_design, aes(x = mpa_design_binary, fill = climate_effect)) +
-  geom_bar() +
+
+```{r run anova and make figure 7b}
+library(nnet)
+library(tidyr)
+library(ggplot2)
+
+data <- data %>%
+  mutate(
+    mpa_effect = recode(
+      mpa_effect,
+      positive_population = "positive",
+      negative_population = "negative",
+      positive_ecosystem = "positive",
+      negative_ecosystem = "negative",
+      no_effect = "no_effect"
+    )
+  )
+
+data$mpa_effect <- relevel(
+  factor(data$mpa_effect),
+  ref = "no_effect"
+)
+
+model <- multinom(mpa_effect ~ mpa_design, data = data)
+
+newdat <- data.frame(
+  mpa_design = c("individual", "network")
+)
+
+predict(model, newdata = newdat, type = "probs")
+
+m0 <- multinom(mpa_effect ~ 1, data = data, trace = FALSE)
+m1 <- multinom(mpa_effect ~ mpa_design, data = data, trace = FALSE)
+
+anova(m0, m1)
+
+probs <- predict(m1,
+                 newdata = newdat,
+                 type = "probs")
+
+probs
+
+plotdat <- cbind(newdat, probs)
+
+plotdat_long <- pivot_longer(
+  plotdat,
+  cols = c(negative, no_effect, positive),
+  names_to = "effect",
+  values_to = "probability"
+)
+
+plotdat_long$effect <- factor(
+  plotdat_long$effect,
+  levels = c("no_effect", "negative", "positive")
+)
+
+figure_7b <- ggplot(plotdat_long,
+       aes(x = mpa_design,
+           y = probability,
+           fill = effect)) +
+  geom_col(position = "fill") +
+  labs(fill = "Collapsed MPA effect", y = "Predicted probability of occurence", x = NULL) +
   my_theme() +
-  scale_fill_manual(values = climate_colors,
-                    labels = c("mortality" = "Mortality",
-                              "habitat_formation" = "Habitat formation", 
-                              "body_size" = "Body size", 
-                              "movement_range" = "Movement and range shift",
-                              "disease_parasite" = "Disease and parasitism", 
-                              "reproduction" = "Reproduction",
-                              "phenology" = "Phenology")) +
-  scale_x_discrete(labels = c("mortality" = "Mortality",
-                              "habitat_formation" = "Habitat formation", 
-                              "body_size" = "Body size", 
-                              "movement_range" = "Movement and range shift",
-                              "disease_parasite" = "Disease and parasitism", 
-                              "reproduction" = "Reproduction",
-                              "phenology" = "Phenology"))
+  scale_fill_manual(values = c("grey60", "#d47264", "#8ec1da"),
+                    labels = c("no_effect" = "No detected effect",
+                              "negative" = "Negative effect", 
+                              "positive" = "Positive effect"),
+                    breaks = c("no_effect", "negative", "positive"))
+
+figure_7 <- figure_7a + figure_7b +
+  plot_annotation(tag_levels = list(c("(a)", "(b)")))
+
+figure_7
+
+#ggsave(here("fig", "figure7.png"), plot = figure_7, width = 10, height = 6, dpi = 300)
+```
+
+
+
+```{r make supplemental figure}
+library(emmeans)
+
+emm <- emmeans(
+  m1,
+  specs = ~ mpa_effect | mpa_design,
+  mode = "prob"
+)
+
+emm
+
+emm_df <- as.data.frame(summary(emm))
+#plot
+emm_df$mpa_effect <- factor(
+  emm_df$mpa_effect,
+  levels = c("no_effect", "negative", "positive")
+)
+
+figure_s2 <- ggplot(
+  emm_df,
+  aes(
+    x = mpa_design,
+    y = prob,
+    color = mpa_effect
+  )
+) +
+  geom_point(
+    position = position_dodge(width = 0.4),
+    size = 3
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = lower.CL,
+      ymax = upper.CL
+    ),
+    position = position_dodge(width = 0.4),
+    width = 0.15
+  ) +
+  scale_color_manual(
+    values = c(
+      no_effect = "grey40",
+      negative = "#d47264",
+      positive = "#8ec1da"
+    ),
+    labels = c(
+      "No effect",
+      "Negative",
+      "Positive"
+    )
+  ) +
+  labs(
+    y = "Probability",
+    color = "Collapsed MPA effect",
+    x = NULL
+  ) +
+  my_theme()
+
+ggsave(here("fig", "figure_s2.png"), plot = figure_s2, width = 8, height = 6, dpi = 300)
 
 ```
 
