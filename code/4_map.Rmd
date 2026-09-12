@@ -54,7 +54,7 @@ map_climate <- ggplot() +
     hjust = 1,          # right-align the text to the edge
     vjust = -0.3,       # small vertical adjustment
     color = "grey40",
-    size = 2.5
+    size = 3.5
   )
 
 
@@ -85,7 +85,7 @@ map_mpa <- ggplot() +
     hjust = 1,          # right-align the text to the edge
     vjust = -0.3,       # small vertical adjustment
     color = "grey40",
-    size = 2.5
+    size = 3.5
   )
 
 
@@ -96,13 +96,27 @@ map_mpa
 
 ```{r, fig.width = 20}
 #combine figures using patchwork packages
-figure_4 <- map_mpa + map_climate +
+# figure_4 <- map_mpa + map_climate +
+#   plot_layout(ncol = 1) +
+#   plot_annotation(tag_levels = list(c("(a)", "(b)")),
+#                   caption = stringr::str_wrap("Figure 4: Geographic distribution of occurrences of (a) marine protected area (MPA) effects and (b) climate impacts included in the study. Each circle represents the estimated location of one occurrence, jittered for visualization purposes. The color represents the MPA effect and climate impact identified for each occurrence.", width = 80),
+#                   theme = theme(plot.caption = element_text(size = 12)))
+# 
+# #print figure
+# figure_4
+# 
+# ggsave(here("fig", "figure4_v1.png"), plot = figure_4, width = 10, height = 9, dpi = 900)
+```
+
+```{r}
+#combine figures using patchwork packages
+figure_4_v2 <- map_mpa + map_climate +
   plot_layout(ncol = 1) +
   plot_annotation(tag_levels = list(c("(a)", "(b)")))
 
 #print figure
-figure_4
+figure_4_v2
 
-ggsave(here("fig", "figure4.png"), plot = figure_4, width = 12, height = 10, dpi = 300)
+ggsave(here("fig", "figure4_v2.png"), plot = figure_4_v2, width = 10, height = 8, dpi = 600)
 ```
 

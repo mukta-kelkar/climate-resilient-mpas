@@ -38,8 +38,10 @@ data <- read.csv(here("data", "data.csv"), na.strings = c("", "NA")) %>% #read i
  # ))
 
 data_unique <- data %>% 
-  select(citation, topic, climatic_zone, habitat_type, geographic_region) %>% #select variable that are constant within each case study
+  select(citation, topic, climatic_zone, habitat_type, geographic_region, analytical_method) %>% #select variable that are constant within each case study
   distinct(citation, climatic_zone, geographic_region, .keep_all = TRUE)
+
+table(data_unique$analytical_method)
 
 #add google fonts to working memory for figures
 #font_add_google(name = "Work Sans",   # Name of the font on the Google Fonts site
@@ -86,8 +88,10 @@ my_theme <- function() {
         family = "Arial",
         color = "gray30",
         size = 12
-      )
-    )
+      ),
+      
+      # Caption text
+      plot.caption = element_text(size = 12, family = "Arial", color = "black"))
 }
 
 #source for standard color palettes: https://www.simplifiedsciencepublishing.com/resources/best-color-palettes-for-scientific-figures-and-data-visualizations

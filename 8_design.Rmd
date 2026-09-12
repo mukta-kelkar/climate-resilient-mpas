@@ -78,7 +78,7 @@ predict(model, newdata = newdat, type = "probs")
 m0 <- multinom(mpa_effect ~ 1, data = data, trace = FALSE)
 m1 <- multinom(mpa_effect ~ mpa_design, data = data, trace = FALSE)
 
-anova(m0, m1)
+r <- anova(m0, m1)
 
 probs <- predict(m1,
                  newdata = newdat,
@@ -120,7 +120,25 @@ figure_7
 
 #ggsave(here("fig", "figure7.png"), plot = figure_7, width = 10, height = 6, dpi = 300)
 ```
+```{r high res for publication}
+# figure_7_v1 <- figure_7a + figure_7b +
+#   plot_annotation(tag_levels = list(c("(a)", "(b)")),
+#                   caption = stringr::str_wrap("Figure 7: a) Proportion and b) predicted probability of occurrences of each MPA effect in individual MPAs and MPA networks. Color corresponds to MPA effect type.", width = 82),
+#                   theme = theme(plot.caption = element_text(size = 12)))
+# 
+# figure_7_v1
+# 
+# ggsave(here("fig", "figure7_v1.png"), plot = figure_7_v1, width = 10, height = 7, dpi = 900)
+```
 
+```{r}
+figure_7_v2 <- figure_7a + figure_7b +
+  plot_annotation(tag_levels = list(c("(a)", "(b)")))
+
+figure_7_v2
+
+ggsave(here("fig", "figure7_v2.png"), plot = figure_7_v2, width = 10, height = 6, dpi = 600)
+```
 
 
 ```{r make supplemental figure}
@@ -180,7 +198,9 @@ figure_s2 <- ggplot(
   ) +
   my_theme()
 
-ggsave(here("fig", "figure_s2.png"), plot = figure_s2, width = 8, height = 6, dpi = 300)
+figure_s2
+
+#ggsave(here("fig", "figure_s2.png"), plot = figure_s2, width = 8, height = 6, dpi = 300)
 
 ```
 

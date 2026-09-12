@@ -172,67 +172,66 @@ ggsave(here("fig", "figure2_v3.png"), plot = figure2, width = 8, height = 8, dpi
 ```
 
 
-```{r make figures - preliminary}
-# #figure 1a
-# fig_habitat <- ggplot(data = habitat_counts, aes (x = reorder(habitat_type, n), y = n)) +
-#   geom_col(width = 0.8/8*3) +
-#   labs(
-#     x = "Climatic Zone",
-#     y = ""
-#   ) +
-#   my_theme +
-#   scale_x_discrete(labels = c("tropical" = "Tropical", 
-#                               "temperate" = "Temperate", 
-#                               "na" = "Not specified",
-#                               "polar" = "Polar"),
-#                    drop = FALSE) +
-#   coord_flip() +
-#   ylim(0,130)
-# 
-# 
-# #figure 1b
-# subhabitat_counts <- data %>% 
-#   count(habitat_subtype) #make dataset with counts data
-# 
-# #figure 1b
-# fig_subhabitat <- ggplot(data = subhabitat_counts, aes (x = reorder(habitat_subtype, n), y = n)) +
-#   geom_col(width = 0.8/8*8) +
-#   labs(
-#     x = "Habitat Subtype",
-#     y = ""
-#   ) +
-#   my_theme +
-#   scale_x_discrete(labels = c("coral_reef" = "Coral reef",
-#                               "rocky_reef" = "Rocky reef",
-#                               "na" = "Not specified",
-#                               "kelp_forest" = "Kelp forest",
-#                               "shallow_reef" = "Shallow reef",
-#                               "seagrass" = "Seagrass",
-#                               "deep_reef" = "Deep reef",
-#                               "intertidal" = "Intertidal"),
-#                    drop = FALSE) +
-#   coord_flip() +
-#   ylim(0,130)
-# 
-# #figure - first option
-# fig_assemblage <- ggplot(data = assemblages_combined, aes (x = reorder(grouped_assemblage_highest, total), y = total)) +
-#   geom_col(width = 0.8/8*7) +   #set up column chart
-#   labs(
-#     x = "Assemblage Type",
-#     y = ""
-#   ) +
-#   my_theme +
-#   scale_x_discrete(labels = c("fish" = "Fish",
-#                               "na" = "Not specified",
-#                               "coral" = "Coral",
-#                               "benthic" = "Benthic",
-#                               "invertebrates" = "Invertebrates",
-#                               "macroalgae" = "Macroalgae"),
-#                    drop = FALSE) +
-#   coord_flip() +
-#   ylim(0,119)
-# 
-# figure_2 <- (fig_habitat / fig_subhabitat / fig_assemblage) +
-#   theme(axis.title.x = element_blank())
+```{r figure for publication}
+figure2_v4 <- ggplot(counts, aes(x=n, 
+                        y=tidytext::reorder_within(habitat, n, catg),
+                        fill = mpa_effect)) +
+  facet_grid(catg~., space="free_y", scales="free_y", switch = "y") +
+  geom_bar(stat="identity") +
+  # Labels
+  labs(x="Number of occurences", y="", fill = "MPA Effect",
+       caption = stringr::str_wrap(
+       "Figure 2: Number of occurrences of each climatic zone type, habitat type, and assemblage type. Each color represents a different MPA effect.", 
+       width = 75)) +
+  # Scales
+  tidytext::scale_y_reordered() +
+  # Theme
+  #theme_classic() +
+  my_theme() +
+  scale_fill_manual(values = mpa_colors,
+                    labels = c("no_effect" = "No detected effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)"),
+                    breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population")) +
+    theme(strip.background = element_rect(colour=NA, fill=NA),
+        strip.text = element_text(
+          size = 14),
+        strip.placement = "outside")
+
+figure2_v4
+
+ggsave(here("fig", "figure2_v4.png"), plot = figure2_v4, width = 9, height = 8, dpi = 900)
+```
+
+```{r}
+figure2_v5 <- ggplot(counts, aes(x=n, 
+                        y=tidytext::reorder_within(habitat, n, catg),
+                        fill = mpa_effect)) +
+  facet_grid(catg~., space="free_y", scales="free_y", switch = "y") +
+  geom_bar(stat="identity") +
+  # Labels
+  labs(x="Number of occurences", y="", fill = "MPA Effect") +
+  # Scales
+  tidytext::scale_y_reordered() +
+  # Theme
+  #theme_classic() +
+  my_theme() +
+  scale_fill_manual(values = mpa_colors,
+                    labels = c("no_effect" = "No detected effect",
+                              "positive_ecosystem" = "Ecosystem (+)", 
+                              "negative_ecosystem" = "Ecosystem (-)",
+                              "positive_population" = "Population (+)", 
+                              "negative_population" = "Population (-)"),
+                    breaks = c("no_effect", "positive_ecosystem", "positive_population", "negative_ecosystem", "negative_population")) +
+    theme(strip.background = element_rect(colour=NA, fill=NA),
+        strip.text = element_text(
+          size = 14),
+        strip.placement = "outside")
+
+figure2_v5
+
+ggsave(here("fig", "figure2_v5.png"), plot = figure2_v5, width = 9, height = 8, dpi = 600)
 ```
 
